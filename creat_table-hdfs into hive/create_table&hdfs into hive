@@ -1,0 +1,121 @@
+内部外部表区别：
+
+如果数据在hdfs上，在进行数据导入的时候执行的是一个移动的过程；如果是内部表，一旦删除元数据和数据都被删除；
+                                                               如果是外部表，一旦删除元数据被删除，数据还会保留；
+
+
+如果数据在本地上，在进行数据导入的时候执行的是一个复制的过程； 如果是内部表，一旦删除元数据和数据都被删除；
+                                                               如果是外部表，一旦删除元数据被删除，数据还会保留；
+
+
+
+hive使用：
+
+1，直接敲hive回车
+2，选择自己的库，use opdn1_zwkj2;
+3,写自己的逻辑 select等等
+
+
+建表语句：
+
+
+外部表创建多一个external
+下面是以流量上网日志原始数据表为样例：
+
+create external table IF NOT EXISTS  DWD_D_IA_UA_PART(
+device_number String,
+ua_keyword String,
+is_app_ident String,
+is_app_ident_dynamic String,
+ua_prod_id String,
+ua_prod_name String,
+ua_proj_id String,
+ua_proj_sub_id String,
+is_ua_browser String,
+domain_code String,
+is_domain_ident String,
+is_domain_ident_dynamic String,
+domain_label String,
+domain_level String,
+domain_type String,
+is_noise String,
+ident_domain String,
+ident_domain_level String,
+ident_domain_type String,
+root_domain String,
+w3_prod_id String,
+w3_prod_name String,
+w3_proj_id String,
+w3_proj_sub_id String,
+is_w3_browser String,
+is_w3_public String,
+target_ip String,
+target_port String,
+lac String,
+ci String,
+imei String,
+imsi String,
+dpi_type String,
+rat_type String,
+mime_type String,
+mime_sub_type String,
+start_time String,
+end_time String,
+stat_visit_cnt String,
+stat_visit_dura String,
+stat_total_flow String,
+cdr_dura String,
+up_flow String,
+down_flow String,
+total_flow String,
+user_agent String,
+url String,
+cdr_date String,
+cdr_hour String,
+ua_prod_label String,
+ua_label_name1 String,
+ua_label_name2 String,
+terminal_ip String,
+status_code String,
+apn String,
+sgsn_ip String,
+ggsn_ip String,
+content_type String,
+source_port String,
+record_megtype String,
+merge_records String,
+path String,
+date_id String,
+prov_id String,
+part_id String)row format delimited fields terminated by '|' stored as textfile;
+
+数据导入方式（路径自己定义）：
+从本地导入
+Load data local inpath '/home/opdn1_zwkj2/data/DUAPART_20171023_031_SE.txt'   into table DWD_D_IA_UA_PART;
+从hdfs导入
+Load data  inpath '/files/prov/opdn1_zwkj2/DUAPART_20171023_031_SE.txt'  into table DWD_D_IA_UA_PART;
+(overright)
+
+hdfs dfs -ls /files/prov/opdn1_zwkj2/
+
+
+
+
+
+
+hadoop fs -du -h /user/opdn1_zwkj2  
+hadoop fs -du -h /user/opdn1_zwkj2/opdn1_zwkj2.db
+
+Hadoop dfsadmin -report
+查看大小
+
+
+
+
+----后台执行
+nohup hive -f internet_stat.hql >>internet_stat.log 2>&1 &
+----查看日志
+tail -f internet_stat.log
+----中断
+ps -ef|grep internet_stat.hql 脚本名字
+kill -9 进程
