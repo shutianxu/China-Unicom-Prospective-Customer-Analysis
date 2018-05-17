@@ -1,0 +1,130 @@
+#用户游览明细
+drop table temp_autohome_step_baoma_iu;
+create table temp_autohome_step_baoma_iu as
+select *,
+ (case 
+  when u.url like '%k.m.autohome.com.cn/spec/%' then 'consider'
+  when u.url like '%m.autohome.com.cn/spec/%' then 'consider'
+  when u.url like '%car.m.autohome.com.cn/config/spec/%' then 'consider'
+  when u.url like '%jiage.m.autohome.com.cn/mobile/carlist/p%' then 'consider' 
+  when u.url like '%buy.m.autohome.com.cn%' then 'consider'
+  when u.url like '%hidao.m.autohome.com.cn%' then 'consider'
+  when u.url like '%car.m.autohome.com.cn/brand/%' then 'consider'
+
+  when u.url like '%car.m.autohome.com.cn/brand/%' then 'know'
+  when u.url like '%m.autohome.com.cn/%' then 'know'
+  when u.url like '%m.autohome.com.cn/%' then 'know'
+  when u.url like '%car.m.autohome.com.cn/pic/series/%' then 'know'
+  when u.url like '%v.m.autohome.com.cn/%' then 'know'
+
+
+  when u.url like '%dealer.m.autohome.com.cn/dealer/order-%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/list_*_' then 'leave'
+  when u.url like '%tuan.m.autohome.com.cn%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/dealer/%' then 'leave'
+
+  when u.url like '%/duibi/%' then 'compare'
+
+  else 'null'
+  end
+  )step
+  from temp_autohome_iu u;
+  
+  
+  龙：
+  2847
+  when u.url like '%buy.m.autohome.com.cn/2847\+/%' then 'consider'
+  when u.url like '%buy.m.autohome.com.cn/2847\+/2847\+/%' then 'consider'
+  when u.url like '%club.m.autohome.com.cn/bbs/forum-c-2847\+-%' then 'consider'
+  when u.url like '%zhidao.m.autohome.com.cn/series/2847\+-/*%' then 'consider' 
+  when u.url like '%club.m.autohome.com.cn/bbs/threadqa-c-2847\+-*-/*%' then 'consider'
+  when u.url like '%m.autohome.com.cn/2847\+/%' then 'consider'
+  when u.url like '%car.m.autohome.com.cn/pic/series/2847\+%' then 'consider'
+  when u.url like '%v.m.autohome.com.cn/2847\+/%' then 'consider'
+  
+  
+  65
+  when u.url like '%buy.m.autohome.com.cn/65\+/%' then 'consider'
+  when u.url like '%buy.m.autohome.com.cn/65\+/65\+/%' then 'consider'
+  when u.url like '%club.m.autohome.com.cn/bbs/forum-c-65\+-%' then 'consider'
+  when u.url like '%zhidao.m.autohome.com.cn/series/65\+-/*%' then 'consider' 
+  when u.url like '%club.m.autohome.com.cn/bbs/threadqa-c-65\+-*-/*%' then 'consider'
+  when u.url like '%m.autohome.com.cn/65\+/%' then 'consider'
+  when u.url like '%car.m.autohome.com.cn/pic/series/65\+%' then 'consider'
+  when u.url like '%v.m.autohome.com.cn/65\+/%' then 'consider'
+  
+  202
+  when u.url like '%buy.m.autohome.com.cn/202\+/%' then 'consider'
+  when u.url like '%buy.m.autohome.com.cn/202\+/202\+/%' then 'consider'
+  when u.url like '%club.m.autohome.com.cn/bbs/forum-c-202\+-%' then 'consider'
+  when u.url like '%zhidao.m.autohome.com.cn/series/202\+-/*%' then 'consider' 
+  when u.url like '%club.m.autohome.com.cn/bbs/threadqa-c-202\+-*-/*%' then 'consider'
+  when u.url like '%m.autohome.com.cn/202\+/%' then 'consider'
+  when u.url like '%car.m.autohome.com.cn/pic/series/202\+%' then 'consider'
+  when u.url like '%v.m.autohome.com.cn/202\+/%' then 'consider'
+
+
+  4350
+  when u.url like '%buy.m.autohome.com.cn/4350\+/%' then 'consider'
+  when u.url like '%buy.m.autohome.com.cn/4350\+/4350\+/%' then 'consider'
+  when u.url like '%club.m.autohome.com.cn/bbs/forum-c-4350\+-%' then 'consider'
+  when u.url like '%zhidao.m.autohome.com.cn/series/4350\+-/*%' then 'consider' 
+  when u.url like '%club.m.autohome.com.cn/bbs/threadqa-c-4350\+-*-/*%' then 'consider'
+  when u.url like '%m.autohome.com.cn/4350\+/%' then 'consider'
+  when u.url like '%car.m.autohome.com.cn/pic/series/4350\+%' then 'consider'
+  when u.url like '%v.m.autohome.com.cn/4350\+/%' then 'consider'
+
+  了解
+   2847
+  when u.url like '%m.autohome.com.cn/2847\+/%' then 'know'
+  when u.url like '%car.m.autohome.com.cn/pic/series/2847\+%' then 'know'
+  when u.url like '%v.m.autohome.com.cn/2847\+/%' then 'know'
+ 
+  65
+  when u.url like '%m.autohome.com.cn/65\+/%' then 'know'
+  when u.url like '%car.m.autohome.com.cn/pic/series/65\+%' then 'know'
+  when u.url like '%v.m.autohome.com.cn/65\+/%' then 'know'
+  
+  202
+  when u.url like '%m.autohome.com.cn/202\+/%' then 'know'
+  when u.url like '%car.m.autohome.com.cn/pic/series/202\+%' then 'know'
+  when u.url like '%v.m.autohome.com.cn/202\+/%' then 'know'
+ 
+  4350
+  when u.url like '%m.autohome.com.cn/4350\+/%' then 'know'
+  when u.url like '%car.m.autohome.com.cn/pic/series/4350\+%' then 'know'
+  when u.url like '%v.m.autohome.com.cn/4350\+/%' then 'know'
+ 
+ 留资 
+  2847
+  when u.url like '%dealer.m.autohome.com.cn/dealer/order-2847\+-2847\+%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_2847\+_*_*_/*' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_2847\+_2847\+_*_/*' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/list_*_2847\+_2847\+_*_/*%' then 'leave'
+  when u.url like '%tuan.m.autohome.com.cn/subject/*/*/series2847\+/*%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/dealer/drive_2847\+/*%' then 'leave'
+  
+  65
+  when u.url like '%dealer.m.autohome.com.cn/dealer/order-65\+-65\+%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_65\+_*_*_/*' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_65\+_65\+_*_/*' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/list_*_65\+_65\+_*_/*%' then 'leave'
+  when u.url like '%tuan.m.autohome.com.cn/subject/*/*/series65\+/*%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/dealer/drive_65\+/*%' then 'leave'
+  
+  202
+  when u.url like '%dealer.m.autohome.com.cn/dealer/order-202\+-202\+%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_202\+_*_*_/*' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_202\+_202\+_*_/*' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/list_*_202\+_202\+_*_/*%' then 'leave'
+  when u.url like '%tuan.m.autohome.com.cn/subject/*/*/series 202\+/*%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/dealer/drive_202\+/*%' then 'leave'
+  
+  4350
+  when u.url like '%dealer.m.autohome.com.cn/slist_*_4350\+_*_*_/*%' then 'leave'
+  when u.url like '%tuan.m.autohome.com.cn/subject/*/*/series4350\+/*%' then 'leave'
+  when u.url like '%dealer.m.autohome.com.cn/dealer/drive_4350\+/*%' then 'leave'
+  
+  
+ 
