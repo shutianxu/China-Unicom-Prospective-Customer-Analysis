@@ -1,0 +1,1209 @@
+----后台执行
+nohup hive -f internet_stat.hql >>internet_stat.log 2>&1 &
+----查看日志
+tail -f internet_stat.log
+----中断
+ps -ef|grep internet_stat.hql 脚本名字
+kill -9 进程
+
+-----1.用户画像
+
+---用户基本信息整理
+drop table user_age_sex_area;
+create table user_age_sex_area as
+select device_number,cust_sex,(case
+when cert_age > 0 and cert_age <= 20 then '0-20old'
+when cert_age > 20 and cert_age <= 30 then '20-30old'
+when cert_age > 30 and cert_age <= 40 then '30-40old'
+when cert_age > 40 and cert_age <= 50 then '40-50old'
+when cert_age > 50 and cert_age <= 60 then '50-60old'
+when cert_age > 60 and cert_age <= 70 then '60-70old'
+else 'unknow'
+end)years_old,area_id,month_id,prov_id from dwa_v_m_cus_2g_rns_wide where month_id='201711' and prov_id='031'
+union all
+select device_number,cust_sex,(case
+when cert_age > 0 and cert_age <= 20 then '0-20old'
+when cert_age > 20 and cert_age <= 30 then '20-30old'
+when cert_age > 30 and cert_age <= 40 then '30-40old'
+when cert_age > 40 and cert_age <= 50 then '40-50old'
+when cert_age > 50 and cert_age <= 60 then '50-60old'
+when cert_age > 60 and cert_age <= 70 then '60-70old'
+else 'unknow'
+end)years_old,area_id,month_id,prov_id from dwa_v_m_cus_3g_rns_wide where month_id='201711' and prov_id='031'
+union all
+select device_number,cust_sex,(case
+when cert_age > 0 and cert_age <= 20 then '0-20old'
+when cert_age > 20 and cert_age <= 30 then '20-30old'
+when cert_age > 30 and cert_age <= 40 then '30-40old'
+when cert_age > 40 and cert_age <= 50 then '40-50old'
+when cert_age > 50 and cert_age <= 60 then '50-60old'
+when cert_age > 60 and cert_age <= 70 then '60-70old'
+else 'unknow'
+end)years_old,area_id,month_id,prov_id from dwa_v_m_cus_cb_rns_010 where month_id='201711' and prov_id='031'
+
+
+
+
+---用户life stage（待测试）
+drop table DM_M_LIFE_STAGE;
+create table DM_M_LIFE_STAGE as
+select device_number,(
+case 
+when label_code in ('H004008','A009') and visit_cnt > 10 then 'birth'
+when label_code in ('H002002','A005') and visit_cnt > 10 then 'marry'
+when label_code in ('H005009','A010') and visit_cnt > 10 then 'job'
+else 'null'
+end
+) life_stage,month_id,prov_id
+from dwa_m_ia_basic_label where month_id='201711' and prov_id ='031'
+
+
+
+select life_stage,count(distinct device_number) from DM_M_LIFE_STAGE
+group by life_stage
+
+
+---用户上网行为(月表)（待测试）
+drop table cust_m_internet_behavior;
+
+
+
+---------标签统计(internet_stat.log)
+use opdn1_zwkj2;
+create table  cust_m_internet_behavior as
+select t1.device_number,t1.internet_search_cnt,t2.internet_search_dura,t3.shopping_cnt,t4.shopping_dura,t5.electric_pay_cnt,t6.electric_pay_dura,t7.enjoy_cnt,t8.enjoy_dura,t9.tongxin_cnt,t10.tongxin_dura,t11.social_cnt,t12.social_dura,t13.car_cnt,t14.car_dura,t15.life_cnt,t16.life_dura,t17.qita_cnt,t18.qita_dura,t19.gongxiangdanche_cnt,t20.gongxiangdanche_dura from 
+(select device_number,sum(visit_cnt) as internet_search_cnt from DWA_M_IA_BASIC_LABEL where label_code in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999','H004003') and month_id = '201711' and prov_id = '031'  group by device_number) t1
+left join 
+(select device_number,sum(visit_dura) as internet_search_dura from DWA_M_IA_BASIC_LABEL where label_code in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999','H004003') and month_id = '201711' and prov_id = '031'  group by device_number) t2
+on t1.device_number = t2.device_number
+left join
+(select device_number,sum(visit_cnt) as shopping_cnt from DWA_M_IA_BASIC_LABEL where label_code = 'H005001' and month_id = '201711' and prov_id = '031' group by device_number) t3
+on t1.device_number = t3.device_number
+left join
+(select device_number,sum(visit_dura) as shopping_dura from DWA_M_IA_BASIC_LABEL where label_code = 'H005001' and month_id = '201711' and prov_id = '031' group by device_number) t4
+on t1.device_number = t4.device_number
+left join
+(select device_number,sum(visit_cnt) as electric_pay_cnt from DWA_M_IA_BASIC_LABEL where label_code = 'H005002' and month_id = '201711' and prov_id = '031' group by device_number) t5
+on t1.device_number = t5.device_number
+left join
+(select device_number,sum(visit_dura) as electric_pay_dura from DWA_M_IA_BASIC_LABEL where label_code = 'H005002' and month_id = '201711' and prov_id = '031' group by device_number) t6
+on t1.device_number = t6.device_number
+left join
+(select device_number,sum(visit_cnt) as enjoy_cnt from DWA_M_IA_BASIC_LABEL where label_code in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009')  and month_id = '201711' and prov_id = '031' group by device_number) t7	
+on t1.device_number = t7.device_number
+left join
+(select device_number,sum(visit_dura) as enjoy_dura from DWA_M_IA_BASIC_LABEL where label_code in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') and month_id = '201711' and prov_id = '031' group by device_number) t8
+on t1.device_number = t8.device_number
+left join
+(select device_number,sum(visit_cnt) as tongxin_cnt from DWA_M_IA_BASIC_LABEL where label_code in ('H002001' , 'H002999') and month_id = '201711' and prov_id = '031' group by device_number) t9
+on t1.device_number = t9.device_number
+left join
+(select device_number,sum(visit_dura) as tongxin_dura from DWA_M_IA_BASIC_LABEL where label_code in ('H002001' ,'H002999') and month_id = '201711' and prov_id = '031' group by device_number) t10
+on t1.device_number = t10.device_number
+left join
+(select device_number,sum(visit_cnt) as social_cnt from DWA_M_IA_BASIC_LABEL where label_code in ('H002004' , 'H002005' , 'H002006') and month_id = '201711' and prov_id = '031' group by device_number) t11
+on t1.device_number = t11.device_number
+left join
+(select device_number,sum(visit_dura) as social_dura from DWA_M_IA_BASIC_LABEL where label_code in ('H002004' , 'H002005' , 'H002006') and month_id = '201711' and prov_id = '031' group by device_number) t12
+on t1.device_number = t12.device_number
+left join
+(select device_number,sum(visit_cnt) as car_cnt from DWA_M_IA_BASIC_LABEL where label_code in('H004007' , 'H004017') and month_id = '201711' and prov_id = '031' group by device_number) t13
+on t1.device_number = t13.device_number
+left join
+(select device_number,sum(visit_dura) as car_dura from DWA_M_IA_BASIC_LABEL where label_code in('H004007' ,'H004017') and month_id = '201711' and prov_id = '031' group by device_number) t14
+on t1.device_number = t14.device_number
+left join
+(select device_number,sum(visit_cnt) as life_cnt from DWA_M_IA_BASIC_LABEL where label_code in ('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') and month_id = '201711' and prov_id = '031' group by device_number) t15
+on t1.device_number = t15.device_number
+left join
+(select device_number,sum(visit_dura) as life_dura from DWA_M_IA_BASIC_LABEL where label_code in ('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') and month_id = '201711' and prov_id = '031' group by device_number) t16
+on t1.device_number = t16.device_number
+left join
+(select device_number,sum(visit_cnt) as qita_cnt from DWA_M_IA_BASIC_LABEL where label_code in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') and month_id = '201711' and prov_id = '031' group by device_number) t17
+on t1.device_number = t17.device_number
+left join
+(select device_number,sum(visit_dura) as qita_dura from DWA_M_IA_BASIC_LABEL where label_code in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') and month_id = '201711' and prov_id = '031' group by device_number) t18
+on t1.device_number = t18.device_number
+left join
+(select device_number,sum(visit_cnt) as gongxiangdanche_cnt from DWA_M_IA_BASIC_USER_APP where prod_id in ('C27736' ,'C71730' ,'C224664' ,'C83603' ,'C225285' ,'C232941' ,'C230682' ,'C227895' ,'C227288' ,'C225138' ,'C225801' ,'C224667' ,'C225137' ,'C232942') and month_id = '201711' and prov_id = '031' group by device_number) t19
+on t1.device_number = t19.device_number
+left join
+(select device_number,sum(visit_dura) as gongxiangdanche_dura from DWA_M_IA_BASIC_USER_APP where prod_id in ('C27736' ,'C71730' ,'C224664' ,'C83603' ,'C225285' ,'C232941' ,'C230682' ,'C227895' ,'C227288' ,'C225138' ,'C225801' ,'C224667' ,'C225137' ,'C232942') and month_id = '201711' and prov_id = '031' group by device_number) t20
+on t1.device_number = t20.device_number
+
+
+
+select sum(internet_search_dura),sum(shopping_dura),sum(electric_pay_dura),sum(enjoy_dura),sum(tongxin_dura),sum(social_dura),sum(car_dura),sum(life_dura),sum(qita_dura),sum(gongxiangdanche_dura)  from cust_m_internet_behavior where car_dura < 100000;
+
+
+select t1.cust_sex,sum(t2.internet_search_dura),sum(t2.shopping_dura),sum(t2.electric_pay_dura),sum(t2.enjoy_dura),sum(t2.tongxin_dura),sum(t2.social_dura),sum(t2.car_dura),sum(t2.life_dura),sum(t2.qita_dura),sum(t2.gongxiangdanche_dura)  from cust_m_internet_behavior t2,user_age_sex_area t1
+where t1.device_number = t2.device_number and car_dura < 100000
+group by t1.cust_sex;
+
+select t1.years_old,sum(t2.internet_search_dura),sum(t2.shopping_dura),sum(t2.electric_pay_dura),sum(t2.enjoy_dura),sum(t2.tongxin_dura),sum(t2.social_dura),sum(t2.car_dura),sum(t2.life_dura),sum(t2.qita_dura),sum(t2.gongxiangdanche_dura)  from cust_m_internet_behavior t2,user_age_sex_area t1
+where t1.device_number = t2.device_number and car_dura < 100000
+group by t1.years_old;
+
+
+
+
+
+
+-----使用者人数统计(label_stat.log)
+
+
+
+
+----后台执行
+nohup hive -f label_stat.hql >>label_stat.log 2>&1 &
+----查看日志
+tail -f label_stat.log
+----中断
+ps -ef|grep label_stat.hql 脚本名字
+kill -9 进程
+
+
+
+
+use opdn1_zwkj2; 
+select substr (label_code,1,4),sum(visit_cnt),sum(visit_dura),count(distinct device_number) from dwa_m_ia_basic_label where month_id = '201711' and prov_id = '031' group by substr(label_code,1,4);
+
+
+select substr (label_code,1,7),sum(visit_cnt),sum(visit_dura),count(distinct device_number) from dwa_m_ia_basic_label where month_id = '201711' and prov_id = '031' group by substr(label_code,1,7);
+
+
+select label_code_type,sum(visit_cnt),sum(visit_dura),count(distinct device_number) from (
+select device_number,
+(case
+when label_code in ('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999','H004003') then 'internet_search'
+when label_code in ('H005001') then 'shopping'
+when label_code in ('H005002') then 'e-pay'
+when label_code in ('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'enjoy'
+when label_code in ('H002001' , 'H002999') then 'tongxin'
+when label_code in ('H002004' , 'H002005' , 'H002006') then 'social'
+when label_code in ('H004007' , 'H004017') then 'car'
+when label_code in ('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'life'
+when label_code in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') then 'others'
+else 'null'
+end
+)label_code_type,
+visit_cnt,visit_dura from dwa_m_ia_basic_label where month_id = '201711' and prov_id = '031'
+union all
+select * from (
+select device_number, 
+(case
+when prod_id in ('C27736' ,'C71730' ,'C224664' ,'C83603' ,'C225285' ,'C232941' ,'C230682' ,'C227895' ,'C227288' ,'C225138' ,'C225801' ,'C224667' ,'C225137' ,'C232942') then 'gongxiangdanche'
+else 'null'
+end
+)label_code_type,visit_cnt,visit_dura from DWA_M_IA_BASIC_USER_APP where month_id = '201711' and prov_id = '031') t
+where label_code_type != 'null'
+) t1
+group by label_code_type;
+
+
+
+
+
+---用户上网行为(日表)（待测试）
+drop table cust_d_internet_behavior;
+create table  cust_d_internet_behavior as
+select t1.device_number,t1.internet_search_cnt,t2.internet_search_dura,t3.shopping_cnt,t4.shopping_dura,t5.electric_pay_cnt,t6.electric_pay_dura,t7.enjoy_cnt,t8.enjoy_dura,t9.tongxin_cnt,t10.tongxin_dura,t11.social_cnt,t12.social_dura,t13.car_cnt,t14.car_dura,t15.life_cnt,t16.life_dura,t17.qita_cnt,t18.qita_dura,t19.month_id,t19.day_id,
+pmod(datediff(substr(t19.day_id,1,10), 'YYYYMMDD') - 3, 7) week from 
+(select device_number,sum(visit_cnt) as internet_search_cnt from DWA_D_IA_BASIC_LABEL where label_code in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999')  group by device_number) t1
+left join 
+(select device_number,sum(visit_dura) as internet_search_dura from DWA_D_IA_BASIC_LABEL where label_code in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999')  group by device_number) t2
+on t1.device_number = t2.device_number
+left join
+(select device_number,sum(visit_cnt) as shopping_cnt from DWA_D_IA_BASIC_LABEL where label_code = 'H005001' group by device_number) t3
+on t1.device_number = t3.device_number
+left join
+(select device_number,sum(visit_dura) as shopping_dura from DWA_D_IA_BASIC_LABEL where label_code = 'H005001' group by device_number) t4
+on t1.device_number = t4.device_number
+left join
+(select device_number,sum(visit_cnt) as electric_pay_cnt from DWA_D_IA_BASIC_LABEL where label_code = 'H005002' group by device_number) t5
+on t1.device_number = t5.device_number
+left join
+(select device_number,sum(visit_dura) as electric_pay_dura from DWA_D_IA_BASIC_LABEL where label_code = 'H005002' group by device_number) t6
+on t1.device_number = t6.device_number
+left join
+(select device_number,sum(visit_cnt) as enjoy_cnt from DWA_D_IA_BASIC_LABEL where label_code in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009')   group by device_number) t7	
+on t1.device_number = t7.device_number
+left join
+(select device_number,sum(visit_dura) as enjoy_dura from DWA_D_IA_BASIC_LABEL where label_code in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009')  group by device_number) t8
+on t1.device_number = t8.device_number
+left join
+(select device_number,sum(visit_cnt) as tongxin_cnt from DWA_D_IA_BASIC_LABEL where label_code in ('H002001' , 'H002999') group by device_number) t9
+on t1.device_number = t9.device_number
+left join
+(select device_number,sum(visit_dura) as tongxin_dura from DWA_D_IA_BASIC_LABEL where label_code in ('H002001' ,'H002999') group by device_number) t10
+on t1.device_number = t10.device_number
+left join
+(select device_number,sum(visit_cnt) as social_cnt from DWA_D_IA_BASIC_LABEL where label_code in ('H002004' , 'H002005' , 'H002006')  group by device_number) t11
+on t1.device_number = t11.device_number
+left join
+(select device_number,sum(visit_dura) as social_dura from DWA_D_IA_BASIC_LABEL where label_code in ('H002004' , 'H002005' , 'H002006') group by device_number) t12
+on t1.device_number = t12.device_number
+left join
+(select device_number,sum(visit_cnt) as car_cnt from DWA_D_IA_BASIC_LABEL where label_code in('H004007' , 'H004017')  group by device_number) t13
+on t1.device_number = t13.device_number
+left join
+(select device_number,sum(visit_dura) as car_dura from DWA_D_IA_BASIC_LABEL where label_code in('H004007' ,'H004017') group by device_number) t14
+on t1.device_number = t14.device_number
+left join
+(select device_number,sum(visit_cnt) as life_cnt from DWA_D_IA_BASIC_LABEL where label_code in ('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005')  group by device_number) t15
+on t1.device_number = t15.device_number
+left join
+(select device_number,sum(visit_dura) as life_dura from DWA_D_IA_BASIC_LABEL where label_code in ('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') group by device_number) t16
+on t1.device_number = t16.device_number
+left join
+(select device_number,sum(visit_cnt) as qita_cnt from DWA_D_IA_BASIC_LABEL where label_code in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') group by device_number) t17
+on t1.device_number = t17.device_number
+left join
+(select device_number,sum(visit_dura) as qita_dura from DWA_D_IA_BASIC_LABEL where label_code in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') group by device_number) t18
+on t1.device_number = t18.device_number
+left join DWA_D_IA_BASIC_LABEL t19
+on t1.device_number = t19.device_number
+
+
+
+
+
+------用户购买力
+use opdn1_zwkj2;
+drop table cust_purchase_power;
+create table cust_purchase_power as
+SELECT sduh.msisdn,sduh.lng,sduh.lat,sduh.area_id,sduh.district_id,
+cxchp.area_price
+from 
+CUSC_XFNL_CITY_HOUSE_PRICE_SHANGHAI_AREA AS cxchp,dwa_m_sa_topic_user_home AS sduh
+where cxchp.area_id=sduh.district_id and 
+sduh.month_id='${hiveconf:month_id}' and sduh.prov_id='${hiveconf:prov_id}';
+
+
+
+
+
+------判断车辆保有者/未保有
+
+------a)访问加油站（待测试）
+use opdn1_zwkj2;
+drop table dwa_d_misidn_stay_gas_subway;
+create table dwa_d_misidn_stay_gas_subway as select * from misidn_stay_20171111_12 where current_dura > 600
+
+use opdn1_zwkj2;
+drop table CUSC_DDH_TMP_LAC_GAS;
+create table CUSC_DDH_TMP_LAC_GAS as
+SELECT y.device_number,y.imsi,t.address,y.start_time,t.wgs84_point_lat,t.wgs84_point_lng,t.code,y.current_dura,(round(6367000 * 2 * asin(sqrt(pow(sin(((t.wgs84_point_lat * pi()) / 180 - (y.current_lat * pi()) / 180) / 2), 2) + cos((y.current_lat * pi()) / 180) * cos((t.wgs84_point_lat * pi()) / 180) * pow(sin(((t.wgs84_point_lng * pi()) / 180 - (y.current_lng * pi()) / 180) / 2), 2))))) as distance,y.month_id,y.day_id from gas_lng_lat t join dwa_d_misidn_stay_gas_subway y;
+
+
+------访问加油站平均周期（待测试）
+select month_id,device_number,count(device_number) from 
+(select distinct device_number,month_id,day_id from CUSC_DDH_TMP_LAC_GAS where distance < 50) t
+group by month_id,device_number
+
+------访问同一加油站比率（待测试）
+select device_number,count(code) as cishu from CUSC_DDH_TMP_LAC_GAS where distance < 50 group by device_number
+
+----A期间访问B次（待测试）
+select device_number from (select device_number,count(code) as cishu from CUSC_DDH_TMP_LAC_GAS where distance < 50 group by device_number) t where cishu > 2
+
+
+
+
+
+-----b)OEM、Carlife、车辆保有者使用软件
+drop table DM_M_IA_APP_WEB_STAT;
+set hive.exec.dynamic.partition.mode = nonstrict
+create table if not exists DM_M_IA_APP_WEB_STAT (device_number string,prod_id string,prod_name string,prod_label string,visit_cnt string,visit_dura string,prov_id string,istype string) partitioned by (month_id string);
+insert into table DM_M_IA_APP_WEB_STAT partition (month_id)
+SELECT device_number,prod_id,prod_name,prod_label,visit_cnt,visit_dura,prov_id,
+(case
+when prod_id != 'null' then 'app'
+else 'null'
+end 
+) istype,month_id
+FROM DWA_M_IA_BASIC_USER_APP
+where month_id in ('201710','201711') and prov_id ='031'
+UNION ALL
+SELECT device_number,prod_id,prod_name,prod_label,visit_cnt,visit_dura,prov_id,
+(case
+when prod_id != 'null' then 'web'
+else 'null'
+end
+) istype,month_id
+FROM DWA_M_IA_BASIC_USER_WEB
+where month_id in ('201710','201711') and prov_id ='031'
+
+
+----保有者APP和web访问人数
+select distinct device_number from DM_M_IA_APP_WEB_STAT where prod_id in ('C225602' ,'C223569' ,'C227439' ,'C227385' ,'C231058' ,'C227429' ,'C223567' ,'C27696' ,'C222419' ,'C48582' ,'C229606' ,'C231442' ,'C222477' ,'C48441' ,'C224605' ,'C223616' ,'C65229' ,'C21580' ,'C222479' ,'C225422' ,'C32036' ,'C227670' ,'C65311' ,'C227666' ,'C29512' ,'C66077' ,'C29819' ,'C84499' ,'C22175' ,'C224988' ,'C231766' ,'C228238' ,'C225685' ,'C226982' ,'C231601' ,'C231054' ,'C231247' ,'C227156' ,'C229965' ,'C66458' ,'C227858' ,'C228165' ,'C231258' ,'C231250' ,'C226428' ,'C231746' ,'C223849' ,'C231251' ,'C231253' ,'C231252' ,'C226991' ,'C223224' ,'C231254' ,'C231248' ,'C230707' ,'C224629' ,'C231249' ,'C224777' ,'C226626' ,'C76354' ,'C27627' ,'C231328' ,'C227560' ,'C65381' ,'C227856' ,'C222465' ,'C222571' ,'C32194' ,'C230361' ,'C66769' ,'C226310' ,'C226836' ,'C66767' ,'C84363' ,'C224460' ,'C223935' ,'C223228' ,'C20430' ,'C225694' ,'C84362' ,'C224781' ,'C224855' ,'C231594' ,'C223594' ,'C230185' ,'C227668' ,'C227116' ,'C227594' ,'C230806' ,'C225183' ,'C227637' ,'C224506' ,'C32504' ,'C227655' ,'C226239' ,'C227681' ,'C225179' ,'C228537' ,'C230805' ,'C226765' ,'C227117' ,'C230255' ,'C227705' ,'C227980' ,'C227645' ,'C231063' ,'C233120' ,'C230515' ,'C227673' ,'C227716' ,'C227688' ,'C231052','W67829' ,'W75331' ,'W33146' ,'W12301' ,'W74121' ,'W84119' ,'W82119' ,'W3000 ' ,'W81520' ,'W27822' ,'W16474' ,'W78586' ,'W78833' ,'W32271' ,'W12304' ,'W67631' ,'W3148 ' ,'W68444' ,'W73806' ,'W9516 ' ,'W80803' ,'W30619' ,'W31124' ,'W72057' ,'W73721' ,'W30997' ,'W82792' ,'W49824' ,'W16492' ,'W12298' ,'W2912 ' ,'W76354' ,'W84280' ,'W27627' ,'W81182' ,'W52187' ,'W84166' ,'W27638' ,'W2907 ' ,'W16559' ,'W78811' ,'W13685' ,'W80610' ,'W5668 ' ,'W72291' ,'W27681' ,'W84135' ,'W74256' ,'W69226' ,'W32888' ,'W27618' ,'W59048' ,'W5617 ' ,'W70118' ,'W16767' ,'W27623' ,'W30620' ,'W2991 ' ,'W68297' ,'W71399' ,'W13632' ,'W3146 ' ,'W27625' ,'W5478 ' ,'W84126') and prov_id ='031' and month_id = '201711'
+
+
+----使用情况
+select prod_name,sum(visit_dura) as co from DM_M_IA_APP_WEB_STAT where prod_id in ('C231058','C227429','C223567','C223569','C27696','C222419','C227439','C48582','C227385','C225602','C229606') and prov_id ='031' and month_id = '201711' group by prod_name order by co desc
+
+select prod_name,sum(visit_dura) as co from DM_M_IA_APP_WEB_STAT where prod_id in ('C231442','C222477','C48441','C224605','C223616','C65229','C21580','C222479','C225422','C32036','C227670','C65311','C227666','C29512','C66077','C29819','C84499','C22175','C224988','C231766','C228238','C225685','C226982','C231601','C231054','C231247','C227156','C229965','C66458','C227858','C228165','C231258','C231250','C226428','C231746','C223849','C231251','C231253','C231252','C226991','C223224','C231254','C231248','C230707','C224629','C231249','C224777','C226626','C76354','C27627','C231328','C227560','C65381','C227856','C222465','C222571','C32194','C230361','C66769','C226310','C226836','C66767','C84363','C224460','C223935','C223228','C20430','C225694','C84362','C224781','C224855','C231594','C223594','C230185','C227668','C227116','C227594','C230806','C225183','C227637','C224506','C32504','C227655','C226239','C227681','C225179','C228537','C230805','C226765','C227117','C230255','C227705','C227980','C227645','C231063','C233120','C23515','C227673','C227716','C227688','C231052') and prov_id ='031' and month_id = '201711' group by prod_name order by co desc
+
+
+
+
+
+
+
+
+------2.基础统计
+
+
+------v1.0
+select t2.cust_sex,t1.prod_name,sum(visit_dura)/(count(distinct t1.device_number) * 30),count(distinct t1.device_number) from 
+(
+select distinct device_number,prod_name,visit_dura,month_id,prov_id from 
+(select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_APP 
+union all
+select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_WEB
+)t2 where prod_name in ('高德官方网站','高德地图','百度地图','腾讯地图','滴滴出行','易到','ofo','摩拜单车','小鸣单车','优拜单车','酷骑单车') and month_id = '201711' and prov_id = '031')t1,
+user_age_sex_area t2                                                                                    
+where t1.device_number = t2.device_number                                                               
+group by t2.cust_sex,t1.prod_name
+
+
+
+select t2.years_old,t1.prod_name,sum(visit_dura)/(count(distinct t1.device_number) * 30),count(distinct t1.device_number) from 
+(
+select distinct device_number,prod_name,visit_dura,month_id,prov_id from 
+(select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_APP 
+union all
+select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_WEB
+)t2 where prod_name in ('高德官方网站','高德地图','百度地图','腾讯地图','滴滴出行','易到','ofo','摩拜单车','小鸣单车','优拜单车','酷骑单车') and month_id = '201711' and prov_id = '031')t1,
+user_age_sex_area t2                                                                                    
+where t1.device_number = t2.device_number                                                               
+group by t2.years_old,t1.prod_name
+
+-----v2.0
+
+select t2.cust_sex,t1.prod_name,sum(visit_dura)/(count(distinct t1.device_number) * 30),count(distinct t1.device_number) from 
+(select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_APP where prod_name in ('高德官方网站','高德地图','百度地图','腾讯地图','滴滴出行','易到','ofo','摩拜单车','小鸣单车','优拜单车','酷骑单车') and month_id = '201711' and prov_id = '031') t1,
+user_age_sex_area t2                                                                                    
+where t1.device_number = t2.device_number                                                               
+group by t2.cust_sex,t1.prod_name
+
+
+select t2.years_old,t1.prod_name,sum(visit_dura)/(count(distinct t1.device_number) * 30),count(distinct t1.device_number) from 
+(select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_APP where prod_name in ('高德官方网站','高德地图','百度地图','腾讯地图','滴滴出行','易到','ofo','摩拜单车','小鸣单车','优拜单车','酷骑单车') and month_id = '201711' and prov_id = '031') t1,
+user_age_sex_area t2                                                                                    
+where t1.device_number = t2.device_number                                                               
+group by t2.years_old,t1.prod_name
+
+
+
+-----音乐
+
+select t1.prod_name,sum(visit_dura)/(count(distinct t1.device_number) * 30),count(distinct t1.device_number) from 
+(select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_APP where prod_name in ('豆瓣FM' ,'咪咕音乐' ,'酷我音乐' ,'网易云音乐' ,'虾米音乐' ,'QQ音乐' ,'酷狗音乐' ,'百度音乐') and month_id = '201711' and prov_id = '031') t1                                                           
+group by t1.prod_name
+
+
+
+use opdn1_zwkj2;
+select t2.cust_sex,t1.prod_name,sum(visit_dura)/(count(distinct t1.device_number) * 30),count(distinct t1.device_number) from 
+(select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_APP where prod_name in ('豆瓣FM' ,'咪咕音乐' ,'酷我音乐' ,'网易云音乐' ,'虾米音乐' ,'QQ音乐' ,'酷狗音乐' ,'百度音乐') and month_id = '201711' and prov_id = '031') t1,
+user_age_sex_area t2                                                                                    
+where t1.device_number = t2.device_number                                                               
+group by t2.cust_sex,t1.prod_name
+
+
+select t2.years_old,t1.prod_name,sum(visit_dura)/(count(distinct t1.device_number) * 30),count(distinct t1.device_number) from 
+(select device_number,prod_name,visit_dura,month_id,prov_id from DWA_M_IA_BASIC_USER_APP where prod_name in ('豆瓣FM' ,'咪咕音乐' ,'酷我音乐' ,'网易云音乐' ,'虾米音乐' ,'QQ音乐' ,'酷狗音乐' ,'百度音乐')  and month_id = '201711' and prov_id = '031')t1,
+user_age_sex_area t2                                                                                    
+where t1.device_number = t2.device_number                                                               
+group by t2.years_old,t1.prod_name
+
+
+
+
+
+
+---性别/年龄段 APP、WEB使用统计(月表)（待测试）
+select t1.device_number,t1.cust_sex,t1.years_old,t2.internet_search_cnt,t2.internet_search_dura,t2.shopping_cnt,t2.shopping_dura,t2.electric_pay_cnt,t2.electric_pay_dura,t2.enjoy_cnt,t2.enjoy_dura,t2.tongxin_cnt,t2.tongxin_dura,t2.social_cnt,t2.social_dura,t2.car_cnt,t2.car_dura,t2.life_cnt,t2.life_dura,t2.qita_cnt,t2.qita_dura
+from user_age_sex_area t1 left join cust_m_internet_behavior t2
+on t1.device_number = t2.device_number 
+
+
+---性别/年龄段 APP、WEB使用统计(日表)（待测试）
+select device_number,t1.cust_sex,t1.years_old,t2.internet_search_cnt,t2.internet_search_dura,t2.shopping_cnt,t2.shopping_dura,t2.electric_pay_cnt,t2.electric_pay_dura,t2.enjoy_cnt,t2.enjoy_dura,t2.tongxin_cnt,t2.tongxin_dura,t2.social_cnt,t2.social_dura,t2.car_cnt,t2.car_dura,t2.life_cnt,t2.life_dura,t2.qita_cnt,t2.qita_dura,t2.(case when(t2.week=1 or t2.week=2 or t2.week=3 or t2.week=4 or t2.week=5 then 'midweek' end) midweek,(case when t2.week=0 or t2.week=6 then 'weekend' end) weekend 
+from user_age_sex_area t1 left join cust_d_internet_behavior t2
+on t1.device_number = t2.device_number 
+
+
+
+---性别/年龄段 生命阶段（待测试）
+select device_number,t1.cust_sex,t1.years_old,t2.life_stage 
+from user_age_sex_area t1 left join DM_M_LIFE_STAGE t2
+on t1.device_number = t2.device_number
+
+
+---性别/年龄段 购买力（待测试）
+select device_number，t1.cust_sex,t1.years_old,t2.purchase_power
+from user_age_sex_area t1 left join cust_purchase_power t2
+on t1.device_number = t2.device_number
+
+
+---用户画像使用比率统计
+
+
+---a)各大分类人均访问使用比率
+select sum(internet_search_cnt)/(30*count(distinct device_number)),sum(shopping_cnt)/(30*count(distinct device_number)),sum(electric_pay_cnt)/(30*count(distinct device_number)),sum(car_cnt)/(30*count(distinct device_number)),sum(life_cnt)/(30*count(distinct device_number)),sum(car_dura)/(30*count(distinct device_number)),sum(enjoy_dura)/(30*count(distinct device_number)),sum(tongxin_dura)/(30*count(distinct device_number)),sum(social_dura)/(30*count(distinct device_number)) from cust_m_internet_behavior
+
+---a)各大分类一天平均使用时间
+
+select sum(internet_search_dura)/30,sum(shopping_dura)/30,sum(electric_pay_dura)/30,sum(car_dura)/30,sum(life_dura)/30,sum(enjoy_dura)/30,sum(tongxin_dura)/30,sum(social_dura)/30 from cust_m_internet_behavior
+
+
+---b)各大分类的明细()
+select fenlei,prod_name,sum(visit_dura) as co from 
+(select (case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select (case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711') t
+where fenlei !=  'unknow'
+group by fenlei,prod_name
+order by co desc
+
+
+---b)各大分类的TOP5app
+select * from (
+select t1.*,row_number() over (partition by t1.fenlei order by t1.co desc) as row_num from 
+(select fenlei,prod_name,sum(visit_dura) as co from 
+(select (case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select (case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711') t
+where fenlei !=  'unknow' 
+group by fenlei,prod_name) t1)t2
+where t2.row_num < 6
+
+dianzizhifu     支付宝  2.0203524784E11 1
+dianzizhifu     腾讯充值中心    1.549517118E9   2
+dianzizhifu     蚂蚁聚宝        1.189730332E9   3
+dianzizhifu     京东钱包        3.65846896E8    4
+dianzizhifu     中国银联        2.73779228E8    5
+gouwu   淘宝网  3.83395617296E11        1
+gouwu   手机淘宝        6.5651359608E10 2
+gouwu   京东    3.3472810504E10 3
+gouwu   天猫    1.3571725332E10 4
+gouwu   天猫商城        1.1645956046E10 5
+qiche   百度地图        1.0466884393E11 1
+qiche   高德官方网站    3.5839807888E10 2
+qiche   高德地图        2.4949870852E10 3
+qiche   腾讯地图        8.534224044E9   4
+qiche   汽车之家        6.646050696E9   5
+shejiao NGA玩家社区     1.86798116E8    1
+shejiao 全民家庭记帐软件        1.20977772E8    2
+shejiao 二手车  1.7651548E7     3
+shejiao 个人征信网上查询        1.4981268E7     4
+shejiao 口语100网络学习空间     1.1673924E7     5
+shenghuo        58同城  7.615022068E9   1
+shenghuo        房地产估价      7.300377052E9   2
+shenghuo        饿了么网上订餐4 6.989862706E9   3
+shenghuo        中国联通手机营业厅      5.320203426E9   4
+shenghuo        德邦物流        4.716302902E9   5
+sousuo  今日头条        1.49109702368E11        1
+sousuo  腾讯新闻        5.764684136E9   2
+sousuo  网易新闻        4.917682554E9   3
+sousuo  搜狐新闻        2.449517216E9   4
+sousuo  新浪新闻        1.085836246E9   5
+tongxin 微信    2.192283639962E12       1
+tongxin QQ      1.07512685182E11        2
+tongxin 个信    6.9996506894E10 3
+tongxin 陌陌    6.645785798E9   4
+tongxin YY语音  5.881590402E9   5
+yule    PPTV聚力        7.438874056E10  1
+yule    爱奇艺视频      4.9749719556E10 2
+yule    腾讯视频        2.560366796E10  3
+yule    西瓜视频        1.4497673058E10 4
+yule    优酷    1.0965869194E10 5
+
+
+
+---b)各大分类的TOP5app
+select * from (
+select t1.*,row_number() over (partition by t1.fenlei order by t1.co desc) as row_num from 
+(select fenlei,prod_name,sum(visit_dura)/(30*count(distinct device_number)),count(distinct device_number) as co from 
+(select device_number,(case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+when prod_id in ('C27736' ,'C71730' ,'C224664' ,'C83603' ,'C225285' ,'C232941' ,'C230682' ,'C227895' ,'C227288' ,'C225138' ,'C225801' ,'C224667' ,'C225137' ,'C232942') then 'gongxiangdanche'
+when prod_label in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') then 'qita'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select device_number,(case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+when prod_id in ('C27736' ,'C71730' ,'C224664' ,'C83603' ,'C225285' ,'C232941' ,'C230682' ,'C227895' ,'C227288' ,'C225138' ,'C225801' ,'C224667' ,'C225137' ,'C232942') then 'gongxiangdanche'
+when prod_label in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') then 'qita'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711') t
+where fenlei !=  'unknow' 
+group by fenlei,prod_name) t1)t2
+where t2.row_num < 7
+
+dianzizhifu     支付宝  657.0567349509199       10249508         1
+dianzizhifu     腾讯充值中心    10.070873717123298      5128708    2
+dianzizhifu     蚂蚁聚宝        6.6609556013306115      5953752    3
+dianzizhifu     京东钱包        14.26841048129627       854678      4
+dianzizhifu     中国银联        10.85642294566856       840606      5
+gongxiangdanche ofo     63.64921548930443       4081440    1
+gongxiangdanche 摩拜单车        21.167318684876445      873084      2
+gongxiangdanche 小鸣单车        7.115629282968411       119660       3
+gongxiangdanche 优拜单车        5.292932687011127       36308          4
+gongxiangdanche 酷骑单车        5.686324122943185       25768          5
+gouwu   淘宝网  1180.062833049918       10829808                1
+gouwu   手机淘宝        524.8053912265227       4169886  2
+gouwu   京东    126.24371108299562      8838146  3
+gouwu   天猫    232.65796242220148      1944446  4
+gouwu   天猫商城        43.26183122680927       8973234  5
+qiche   百度地图        350.2982502096224       9959974  1
+qiche   高德官方网站    110.5374520351553       10807742         2
+qiche   高德地图        169.95384896031302      4893460  3
+qiche   腾讯地图        33.09525095228755       8595618    4
+qiche   汽车之家        50.42147583429229       4393664    5
+qita    百度    398131.61538704246      10636482             1
+qita    91助手官网      1902.7805616203766      14244260         2
+qita    苹果公共资源    1161.7039563262847      11137622                3
+qita    快手    1205.8025401723346      8880946         4
+qita    头条网公共资源  296.140842150678        9574122  5
+shejiao NGA玩家社区     7.532917163690973       826586      1
+shejiao 全民家庭记帐软件        16.040797785167623      251396      2
+shejiao 二手车  3.2820061432279464      179276       3
+shejiao 个人征信网上查询        7.760063401292889       64352        4
+shejiao 口语100网络学习空间     14.642188440698375      26576        5
+shenghuo        58同城  50.46443091661431       5029960    1
+shenghuo        房地产估价      56.92621380693497       4274760    2
+shenghuo        饿了么网上订餐4 36.626219344326444      6361438    3
+shenghuo        中国联通手机营业厅      50.68085434364992       3499154    4
+shenghuo        德邦物流        406.597465222459        386648     5
+sousuo  今日头条        1496.6589075120964      3320946         1
+sousuo  腾讯网  275.08174882903944      11786904         2
+sousuo  头条网  309.4489751830439       8122914  3
+sousuo  新浪网  102.2996076841397       7409166  4
+sousuo  网易网  87.79754502788181       8120228  5
+tongxin 微信    6574.743845978241       11114672               1
+tongxin QQ      351.45566608158657      10196894                2
+tongxin 个信    251.26091493833607      9286032  3
+tongxin 陌陌    191.5415178900817       1156544    4
+tongxin YY语音  35.89309047116715       5462138    5
+yule    PPTV聚力        696.7731388517501       3558726   1
+yule    爱奇艺视频      293.1934739892017       5656074  2
+yule    腾讯视频        101.67065412675275      8394316   3
+yule    西瓜视频        73.80576122498537       6547670  4
+yule    优酷    44.82764042489229       8154098  5
+
+-----修改淘宝、高德
+select fenlei,sum(visit_dura)/(30*count(distinct device_number)),count(distinct device_number) as co from 
+(select device_number,(case
+when prod_name in('高德地图','高德官方网站') then '高德地图'
+when prod_name in('手机淘宝','淘宝网') then '淘宝'
+end)fenlei,visit_dura from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711'
+union all
+select device_number,(case
+when prod_name in('高德地图','高德官方网站') then '高德地图'
+when prod_name in('手机淘宝','淘宝网') then '淘宝'
+end)fenlei,visit_dura from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711') t
+group by fenlei
+
+---b)各大分类的TOP5app
+select count(distinct device_number) from 
+(select device_number from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select device_number from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711') t
+
+
+15375140
+
+use opdn1_Zwkj2;
+select * from (
+select t1.*,row_number() over (partition by t1.fenlei order by t1.co desc) as row_num from 
+(select fenlei,prod_name,sum(visit_dura)/(30*15375140),count(distinct device_number) as co from 
+(select device_number,(case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+when prod_id in ('C27736' ,'C71730' ,'C224664' ,'C83603' ,'C225285' ,'C232941' ,'C230682' ,'C227895' ,'C227288' ,'C225138' ,'C225801' ,'C224667' ,'C225137' ,'C232942') then 'gongxiangdanche'
+when prod_label in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') then 'qita'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select device_number,(case
+when prod_label in('H001002' ,'H001006' , 'H001008' , 'H001011' , 'H001012' , 'H001999') then 'sousuo'
+when prod_label in('H005001') then 'gouwu'
+when prod_label in('H005002') then 'dianzizhifu'
+when prod_label in('H003006' , 'H003999', 'H003001' , 'H003004'  , 'F003009') then 'yule'
+when prod_label in('H002001' , 'H002999')  then 'tongxin'
+when prod_label in('H002004' , 'H002005' , 'H002006') then 'shejiao'
+when prod_label in('H004007' , 'H004017')then 'qiche'
+when prod_label in('H004999', 'H004016' , 'H004013' , 'H004012' , 'H004005') then 'shenghuo'
+when prod_id in ('C27736' ,'C71730' ,'C224664' ,'C83603' ,'C225285' ,'C232941' ,'C230682' ,'C227895' ,'C227288' ,'C225138' ,'C225801' ,'C224667' ,'C225137' ,'C232942') then 'gongxiangdanche'
+when prod_label in ('H001003', 'H001004', 'H001005', 'H001007', 'H001009', 'H001010', 'H002001', 'H002002', 'H002008', 'H002009', 'H002999', 'H003002', 'H003003', 'H003005', 'H003007', 'H003008', 'H004002', 'H004003', 'H004004', 'H004006', 'H004008', 'H004009', 'H004011', 'H004014', 'H004015', 'H004018', 'H004019', 'H004020', 'H004021', 'H004022', 'H004023', 'H005008', 'H005009', 'H005010', 'H005011', 'H005012', 'H005013', 'H005999', 'H006001', 'H006002', 'H006003', 'H006004', 'H006005', 'H006006', 'H006007', 'H006008', 'H006009', 'H006010', 'H006011', 'H006012', 'H006013', 'H006014', 'H006015', 'H006016', 'H006017', 'H006018', 'H006019', 'H006020', 'H006999', 'H007001', 'H007002', 'H007003', 'H007004', 'H007005', 'H007006', 'H007007', 'H007008', 'H007009', 'H007010', 'H007011', 'H007012', 'H007999') then 'qita'
+else 'unknow'
+end)fenlei,prod_name,visit_dura from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711') t
+where fenlei !=  'unknow' 
+group by fenlei,prod_name) t1)t2
+where t2.row_num < 6
+
+
+
+---c)各大分类单次平均使用时间(中分类打标)
+
+
+------汽车中分类
+use opdn1_Zwkj2;
+drop table CUST_M_AUTO_BEHAVIOR;
+create table CUST_M_AUTO_BEHAVIOR_1 as
+select distinct device_number,auto_classify,visit_dura,visit_cnt,month_id from (
+select device_number,
+(case 
+when prod_id in ("C66767 ","C66769 ","C66768 ","C84512 ","C1208") then 'dachechuxing'
+when prod_id in ('C4453','C545','C467','C22113','C1952','C900','C18913','C1223','C971') then 'daohang'
+when prod_id in ('C223294') then 'gongxiangqiche'
+when prod_id in ( 'C231058','C227429','C223567','C223569','C27696','C222419','C227439','C48582','C227385','C225602','C229606') then 'OEM_APP' 
+when prod_id in ('C1087','C2989','C47844','C20809','C930','C366','C84030','C807','C65380') then 'luntan' 
+when prod_id in ('C231442','C222477','C48441','C224605','C223616','C65229','C21580','C222479','C225422','C32036','C227670','C65311','C227666','C29512','C66077','C29819','C84499','C22175','c224988','c231766','c228238','c225685','c226982','C231601','C231054','C231247','C227156','C229965','C66458','C227858','C228165','C231258','C231250','C226428','C231746','C223849','C231251','C231253','C231252','C226991','C223224','C231254','C231248','C230707','C224629','C231249','C224777','C226626','C76354','C27627','C231328','C227560','C65381','C227856','C222465','C222571','C32194','C230361','C66769','C226310','C226836','C66767','C84363','C224460','C223935','C223228','C20430','C225694','C84362','C224781','C224855','C231594','C223594','C230185','C227668','C227116','C227594','C230806','C225183','C227637','C224506','C32504','C227655','C226239','C227681','C225179','C228537','C230805','C226765','C227117','C230255','C227705','C227980','C227645','C231063','C233120','C23515','C227673','C227716','C227688','C231052','C78833','C66435','C30142','C84470','C27808','C9499') then 'OTO'
+
+else 'unknow'
+end)auto_classify,visit_dura,visit_cnt,month_id from DM_M_IA_APP_WEB_STAT) t
+where  t.auto_classify != 'unknow'
+
+
+---c)各大分类单次平均使用时间
+select auto_classify,sum(visit_dura)/30 from CUST_M_AUTO_BEHAVIOR where month_id = '201711' group by auto_classify
+
+
+
+----汽车中分类年龄、性别
+
+
+select t2.cust_sex,t1.auto_classify,sum(t1.visit_dura)/30 from
+(select device_number,auto_classify,visit_dura from CUST_M_AUTO_BEHAVIOR where month_id = '201711') t1,user_age_sex_area t2
+where t1.device_number = t2.device_number
+group by t2.cust_sex,t1.auto_classify;
+
+
+
+select t2.years_old,t1.auto_classify,sum(t1.visit_dura)/30 from
+(select device_number,auto_classify,visit_dura from CUST_M_AUTO_BEHAVIOR where month_id = '201711') t1,user_age_sex_area t2
+where t1.device_number = t2.device_number
+group by t2.years_old,t1.auto_classify;
+
+
+
+
+---c)所有汽车APP排名
+
+---dachechuxing
+select prod_name,sum(visit_dura)/(30 * count(distinct device_number)) as co from dwa_m_ia_basic_user_app
+where prod_id in ('C66767','C66769','C66768','C84512','C1208') and month_id = '201711' and prov_id = '031'
+group by prod_name 
+order by co desc limit 7;
+
+---daohang
+select prod_name,sum(visit_dura) /(30 * count(distinct device_number)) as co from dwa_m_ia_basic_user_app
+where prod_id in ('C4453','C545','C467','C22113','C1952','C900','C18913','C1223','C971') and month_id = '201711' and prov_id = '031'
+group by prod_name 
+order by co desc limit 7;
+
+---gongxiangqiche
+select prod_name,sum(visit_dura) /(30 * count(distinct device_number)) as co from dwa_m_ia_basic_user_app
+where prod_id in ('C223294') and month_id = '201711' and prov_id = '031'
+group by prod_name 
+order by co desc limit 7;
+
+---OEM_APP
+select prod_name,sum(visit_dura) /(30 * count(distinct device_number)) as co from dwa_m_ia_basic_user_app
+where prod_id in ('C231058','C227429','C223567','C223569','C27696','C222419','C227439','C48582','C227385','C225602','C229606') and month_id = '201711' and prov_id = '031'
+group by prod_name 
+order by co desc limit 7;
+
+---luntan
+select prod_name,sum(visit_dura) /(30 * count(distinct device_number)) as co from dwa_m_ia_basic_user_app
+where prod_id in ('C1087','C2989','C47844','C20809','C930','C366','C84030','C807','C65380') and month_id = '201711' and prov_id = '031'
+group by prod_name 
+order by co desc limit 7;
+
+---OTO
+select prod_name,sum(visit_dura) /(30 * count(distinct device_number)) as co from dwa_m_ia_basic_user_app
+where prod_id in ('C231442','C222477','C48441','C224605','C223616','C65229','C21580','C222479','C225422','C32036','C227670','C65311','C227666','C29512','C66077','C29819','C84499','C22175','c224988','c231766','c228238','c225685','c226982','C231601','C231054','C231247','C227156','C229965','C66458','C227858','C228165','C231258','C231250','C226428','C231746','C223849','C231251','C231253','C231252','C226991','C223224','C231254','C231248','C230707','C224629','C231249','C224777','C226626','C76354','C27627','C231328','C227560','C65381','C227856','C222465','C222571','C32194','C230361','C66769','C226310','C226836','C66767','C84363','C224460','C223935','C223228','C20430','C225694','C84362','C224781','C224855','C231594','C223594','C230185','C227668','C227116','C227594','C230806','C225183','C227637','C224506','C32504','C227655','C226239','C227681','C225179','C228537','C230805','C226765','C227117','C230255','C227705','C227980','C227645','C231063','C233120','C23515','C227673','C227716','C227688','C231052','C78833','C66435','C30142','C84470','C27808','C9499') and month_id = '201711' and prov_id = '031'
+group by prod_name 
+order by co desc limit 7;
+
+
+
+
+----d)导航分析(导航占比)
+
+use opdn1_zwkj2;
+create table daohang_111 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('高德地图','高德官方网站') then 'gaode'
+when prod_name in('百度地图') then 'baidu'
+when prod_name in('腾讯地图') then 'tengxun'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select * from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+create table daohang_222 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('高德地图','高德官方网站') then 'gaode'
+when prod_name in('百度地图') then 'baidu'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select * from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+create table daohang_333 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('高德地图','高德官方网站') then 'gaode'
+when prod_name in('腾讯地图') then 'tengxun'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select * from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+create table daohang_444 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('百度地图') then 'baidu'
+when prod_name in('腾讯地图') then 'tengxun'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select * from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+
+
+
+-----d)导航分析(封箱处理)
+select fengxiang,fenlei,count(distinct device_number) from
+
+(select device_number,(case
+when co between 0 and 300 then '0 ~ 5'
+when co between 300 and 600 then '5 ~ 10'
+when co between 600 and 1200 then '10 ~ 20'
+when co between 1200 and 1800 then '20 ~ 30'
+when co > 1800 then '30 ~'
+else 'unknow'
+end)fengxiang,fenlei from
+
+(select device_number,fenlei,sum(visit_dura)/(30 * count(distinct device_number)) as co from 
+(
+select device_number,(case
+when prod_name in('高德地图','高德官方网站') then 'gaode'
+when prod_name in('腾讯地图') then 'tengxun'
+when prod_name in('百度地图') then 'baidu'
+end)fenlei,visit_dura from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+union all
+select device_number,(case
+when prod_name in('高德地图','高德官方网站') then 'gaode'
+when prod_name in('腾讯地图') then 'tengxun'
+when prod_name in('百度地图') then 'baidu'
+end)fenlei,visit_dura from dwa_m_ia_basic_user_web where prov_id = '031' and month_id = '201711'
+)t1 
+group by device_number,fenlei) t
+)t2
+group by fengxiang,fenlei
+
+
+
+
+
+
+----d)导航分析(APP表导航占比)
+
+nohup hive -f daohang_111.hql >>internet_stat.log 2>&1 &
+tail -f daohang_111.log
+----中断
+ps -ef|grep daohang_111.hql 脚本名字
+kill -9 进程
+
+
+
+use opdn1_zwkj2;
+
+drop table daohang_000;
+create table daohang_000 as 
+select prod_name,count(distinct device_number) from dwa_m_ia_basic_user_app where prod_name in ('高德地图','百度地图','腾讯地图') and prov_id = '031' and month_id = '201711' group by prod_name;
+
+drop table daohang_111;
+create table daohang_111 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('高德地图') then 'gaode'
+when prod_name in('百度地图') then 'baidu'
+when prod_name in('腾讯地图') then 'tengxun'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+
+drop table daohang_222;
+create table daohang_222 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('高德地图') then 'gaode'
+when prod_name in('百度地图') then 'baidu'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+
+drop table daohang_333;
+create table daohang_333 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('高德地图') then 'gaode'
+when prod_name in('腾讯地图') then 'tengxun'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+
+drop table daohang_444;
+create table daohang_444 as 
+select co,count(co) from
+(select device_number,count(device_number) as co from 
+(select distinct device_number,(case
+when prod_name in('百度地图') then 'baidu'
+when prod_name in('腾讯地图') then 'tengxun'
+else 'unknow'
+end)fenlei from 
+(
+select * from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+) t2
+) t
+where fenlei != 'unknow'
+group by device_number
+) t1
+group by co;
+
+
+
+-----d)导航分析(APP表封箱处理)
+select fengxiang,fenlei,count(distinct device_number) from
+
+(select device_number,(case
+when co between 0 and 300 then '0 ~ 5'
+when co between 300 and 600 then '5 ~ 10'
+when co between 600 and 1200 then '10 ~ 20'
+when co between 1200 and 1800 then '20 ~ 30'
+when co > 1800 then '30 ~'
+else 'unknow'
+end)fengxiang,fenlei from
+
+(select device_number,fenlei,sum(visit_dura)/(30 * count(distinct device_number)) as co from 
+(
+select device_number,(case
+when prod_name in('高德地图') then 'gaode'
+when prod_name in('腾讯地图') then 'tengxun'
+when prod_name in('百度地图') then 'baidu'
+end)fenlei,visit_dura from dwa_m_ia_basic_user_app where prov_id = '031' and month_id = '201711'
+)t1 
+group by device_number,fenlei) t
+)t2
+group by fengxiang,fenlei
+
+
+
+
+
+
+
+
+
+
+
+--------e)上网行为统计
+
+use opdn1_zwkj2;
+select sum(t2.internet_search_dura),sum(t2.shopping_dura),sum(t2.electric_pay_dura),sum(t2.enjoy_dura),sum(t2.tongxin_dura),sum(t2.social_dura),sum(t2.car_dura),sum(t2.life_dura),sum(t2.qita_dura),sum(t2.gongxiangdanche_dura)  from cust_m_auto_behavior t2,user_age_sex_area t1
+
+
+select t1.cust_sex,sum(t2.internet_search_dura),sum(t2.shopping_dura),sum(t2.electric_pay_dura),sum(t2.enjoy_dura),sum(t2.tongxin_dura),sum(t2.social_dura),sum(t2.car_dura),sum(t2.life_dura),sum(t2.qita_dura),sum(t2.gongxiangdanche_dura)  from cust_m_auto_behavior t2,user_age_sex_area t1
+where t1.device_number = t2.device_number
+group by t1.cust_sex
+
+select t1.years_old,sum(t2.internet_search_dura),sum(t2.shopping_dura),sum(t2.electric_pay_dura),sum(t2.enjoy_dura),sum(t2.tongxin_dura),sum(t2.social_dura),sum(t2.car_dura),sum(t2.life_dura),sum(t2.qita_dura),sum(t2.gongxiangdanche_dura)  from cust_m_auto_behavior t2,user_age_sex_area t1
+where t1.device_number = t2.device_number
+group by t1.years_old
+
+
+
+------3.精准营销
+
+---a)经销商访问模型(UDF待测试)
+use opdn1_zwkj2;
+add jar hdfs://nameservice1/user/opdn1_zwkj2/GenerticUDTFKdTree.jar;
+CREATE TEMPORARY FUNCTION  test_near AS 'GenerticUDTFKdTree';
+select misidn,start_time,current_lat,current_lng,code,brand,dis,lae,loe,current_dura,addr from dwa_d_misidn_stay lateral view test_near('/user/opdn1_zwkj2/deal_lng_lat.txt',current_lng,current_lat,'\t') a as dis,loe,lae,addr;
+
+
+---b)经销商访问模型(笛卡尔积)
+
+
+use opdn1_zwkj2;
+drop table dwa_d_misidn_stay_deal;
+create table dwa_d_misidn_stay_deal as select * from misidn_stay_20171111_12 where current_dura > 1800;
+
+use opdn1_zwkj2;
+drop table CUSC_DDH_TMP_LAC_DEAL;
+create table CUSC_DDH_TMP_LAC_DEAL as
+SELECT y.misidn,y.imsi,t.address,y.start_time,t.wgs84_point_lat,t.brand,t.code,t.wgs84_point_lng,y.current_dura,(round(6367000 * 2 * asin(sqrt(pow(sin(((t.wgs84_point_lat * pi()) / 180 - (y.current_lat * pi()) / 180) / 2), 2) + cos((y.current_lat * pi()) / 180) * cos((t.wgs84_point_lat * pi()) / 180) * pow(sin(((t.wgs84_point_lng * pi()) / 180 - (y.current_lng * pi()) / 180) / 2), 2))))) as distance,y.month_id,y.day_id from deal_lng_lat t join dwa_d_misidn_stay_deal y;
+
+
+---c)spark脚本
+from pyspark.sql import HiveContext
+hive_context = HiveContext(sc)
+hive_context.sql('use opdn1_zwkj2')
+hive_context.sql('create table CUSC_DDH_TMP_LAC_DEAL_1 as SELECT y.misidn,y.imsi,t.address,y.start_time,t.wgs84_point_lat,t.wgs84_point_lng,t.brand,t.code,y.current_dura,(round(6367000 * 2 * asin(sqrt(pow(sin(((t.wgs84_point_lat * pi()) / 180 - (y.current_lat * pi()) / 180) / 2), 2) + cos((y.current_lat * pi()) / 180) * cos((t.wgs84_point_lat * pi()) / 180) * pow(sin(((t.wgs84_point_lng * pi()) / 180 - (y.current_lng * pi()) / 180) / 2), 2))))) as distance,y.month_id,y.day_id from deal_lng_lat t join dwa_d_misidn_stay_deal y')
+
+
+----d)测试经销商访问
+use opdn1_zwkj2;
+drop table dwa_d_misidn_stay_deal_1;
+create table dwa_d_misidn_stay_deal_1 as select * from misidn_stay_20171111_12 where current_dura > 1800 limit 100000;
+
+use opdn1_zwkj2;
+drop table CUSC_DDH_TMP_LAC_DEAL;
+create table CUSC_DDH_TMP_LAC_DEAL as
+SELECT y.misidn,y.imsi,t.address,y.start_time,t.wgs84_point_lat,t.brand,t.code,t.wgs84_point_lng,y.current_dura,(round(6367000 * 2 * asin(sqrt(pow(sin(((t.wgs84_point_lat * pi()) / 180 - (y.current_lat * pi()) / 180) / 2), 2) + cos((y.current_lat * pi()) / 180) * cos((t.wgs84_point_lat * pi()) / 180) * pow(sin(((t.wgs84_point_lng * pi()) / 180 - (y.current_lng * pi()) / 180) / 2), 2))))) as distance,y.month_id,y.day_id from deal_lng_lat t join dwa_d_misidn_stay_deal 
+
+
+
+-------购车主要访问网站整理
+
+drop table dm_d_ia_auto_stat;
+create table dm_d_ia_auto_stat as
+select device_number,prod_id,prod_name,prod_label,visit_cnt,visit_dura,is_app,month_id,day_id,prov_id from DWA_D_IA_BASIC_USER_WEB where prod_id in('W30172','W807','W366','W222544','W1087','W930','W30182','W27824','W17156','W2897','W31263','W2985','W2890') and prov_id ='031' and month_id in('201710','201711')
+union all
+select device_number,prod_id,prod_name,prod_label,visit_cnt,visit_dura,is_app,month_id,day_id,prov_id from DWA_D_IA_BASIC_USER_APP where prod_id in('C2890','C27824','C30172','C930','C807') and prov_id ='031' and month_id in('201710','201711') 
+
+--web prod_id:
+中国汽车网      W30172
+易车网  W807
+汽车召回网      W366
+汽车之家        W222544
+搜狐汽车        W1087
+爱卡汽车网      W930
+卡车之家        W30182
+网上车市        W27824
+腾讯汽车        W17156
+太平洋汽车网    W2897
+网易汽车        W31263
+中国汽车消费网  W2985
+联合越野        W2890
+--app prod_id:
+网上车市        C2890  
+卡车之家        C27824 
+搜狐汽车        C30172 
+太平洋汽车网    C930   
+汽车之家        C807   
+
+
+-------汽车相关网站人数统计
+insert overwrite local directory '/home/opdn1_zwkj2/website_populary_statistic'
+row format delimited
+fields terminated by '\t'
+select month_id,day_id,prod_name,count(distinct device_number) from dm_d_ia_auto_stat group by month_id,day_id,prod_name
+
+
+
+-------一个月访问经销商次数(区分上班、保养、买车用户)
+select month_id,misidn,count(misidn) from 
+(select distinct misidn,month_id,day_id from CUSC_DDH_TMP_LAC_DEAL) t
+group by month_id,misidn
+
+
+-------购车前后访问汽车相关APP次数（测试用）
+select month_id,day_id,sum(visit_cnt) from
+(select device_number,month_id,day_id,visit_cnt from dm_d_ia_auto_stat) t1,
+(select distinct misidn from CUSC_DDH_TMP_LAC_DEAL where distance < 50) t2
+where t1.device_number = t2.misidn 
+group by month_id,day_id
+
+-------购车前后访问汽车相关APP人数（测试用）
+select count(distinct device_number) from
+(select device_number,month_id,day_id,visit_cnt from dm_d_ia_auto_stat) t1,
+(select distinct misidn from CUSC_DDH_TMP_LAC_DEAL where distance < 50) t2
+where t1.device_number = t2.misidn 
+group by month_id,day_id
+
+
+-------购车前后访问汽车情况明细
+drop table cust_auto_internet;
+create table cust_auto_internet as
+select t2.month_id as deal_month_id,t2.day_id as deal_day_id,t1.month_id as app_month_id,t1.day_id as app_day_id,sum(t1.visit_dura)/count(distinct t1.device_number) as auto_dura from
+(select device_number,month_id,day_id,visit_dura from dm_d_ia_auto_stat) t1,
+(select distinct misidn,month_id,day_id from CUSC_DDH_TMP_LAC_DEAL where distance < 50) t2
+where t1.device_number = t2.misidn 
+group by t2.month_id,t2.day_id,t1.month_id,t1.day_id
+
+
+-------购车前后访问汽车之家情况明细
+select t2.month_id as deal_month_id,t2.day_id as deal_day_id,t1.month_id as app_month_id,t1.day_id as app_day_id,sum(t1.visit_dura)/count(distinct t1.device_number) from
+(select device_number,month_id,day_id,visit_dura from dm_d_ia_auto_stat where prod_name = '汽车之家') t1,
+(select distinct misidn,month_id,day_id from CUSC_DDH_TMP_LAC_DEAL where distance < 50) t2
+where t1.device_number = t2.misidn 
+group by t2.month_id,t2.day_id,t1.month_id,t1.day_id
+
+
+-------购车前后访问汽车情况汇总(待测试)
+select t.date_time as auto_date,sum(auto_dura) as auto_visit_dura from 
+(select round((unix_timestamp(concat(app_month_id,app_day_id),'yyyymmdd')-unix_timestamp(concat(deal_month_id,deal_day_id),'yyyymmdd'))/86400) as date_time,auto_dura from cust_auto_internet) t
+group by t.date_time
+
+
+------访问经销商现状
+select month_id,brand,count(*)/30 from CUSC_DDH_TMP_LAC_DEAL where distance < 50 and brand != 'null' group by month_id,brand
+
+
+------经销商平均停留时长
+select brand,avg(current_dura) from CUSC_DDH_TMP_LAC_DEAL where distance < 50 and brand != 'null' group by  brand
+
+
+
+-------一个月内访问两次经销商的情况中，访问同一经销商比率
+
+select t2.month_id,t3.brand,count(*) from 
+(select misidn,brand from CUSC_DDH_TMP_LAC_DEAL where distance < 50 and brand != 'null') t3,
+(select month_id,misidn from 
+(select month_id,misidn,count(misidn) as co from 
+(select distinct misidn,month_id,day_id from CUSC_DDH_TMP_LAC_DEAL where distance < 50) t
+group by month_id,misidn) t1
+where co > 1) t2
+where t2.misidn = t3.misidn
+group by t2.month_id,t3.brand
+
+
+
+--------汽车之家使用周期
+
+use opdn1_zwkj2;
+select device_number,month_id,day_id,sum(visit_dura) from autohome_app where device_number in ('B354DADB827985F8' ,'5E5C3B5F5329413E' ,'DBDB655D45A3E4C2' ,'CCD22C7D5BF33F10' ,'DB9592F441AD29DC' ,'FB408D9617668B8C' ,'831E22572388C145' ,'AEEBAFD8D20753C2' ,'C268C6B108A00CA1' ,'385D47322646438C' ,'61E573BD696D660D' ,'DE63DC46F38CDE3F' ,'483041C5BDFFBE55' ,'2FA1984590B2688E' ,'AAE9C9AC7D8423A4' ,'38567333AA6A7864' ,'ADDCFBABA754FA87' ,'4D7E04CD542204FC' ,'8AF6634837B8E28E' ,'ABF688C5F482487C' ,'F6BE1D1CF84BAC02' ,'324AB4F2CBAA0F01' ,'AD3DC03B008CBC5D' ,'0474D61957336473' ,'23CFDEB8341FC0E6' ,'D3521B232F9EC714' ,'F24A48665451C8EA' ,'63C3427307854351' ,'2F3BC0798BDE7DC0' ,'96382F97DB180E7E')
+group by device_number,month_id,day_id
+
+select device_number,month_id,day_id,sum(visit_dura) from autohome_app where device_number in ('DDECF14582758870' ,'5EF87F04D628D245' ,'A9A58BBA42062D53' ,'2C5EAD657042C633' ,'35D220306EA2874C' ,'26BE699A5ACB2A3D' ,'4C1229DF11933398' ,'D26C4C1F4231A5FB' ,'CE8B7645E34DCB84' ,'551B621466F3ABC5' ,'2BC01C32B1C3ADAB' ,'42B4CBF115637F1D' ,'98B07986A35D3113' ,'33604E14DAD4880D' ,'FC5A4FEEFDF19399' ,'BF537D2B6480111B' ,'05C9B07678FFE0C3' ,'D5B2F4D79ABD9CDB' ,'C576F3FC81873172' ,'0DDC2AC63CB92040' ,'54A0896050A25E0A' ,'271BCFB9667E9E8D' ,'DAF6DF8253512954' ,'B61A573DDD7D6DCA' ,'655099FF6D27EA79' ,'3E955BCBDB8CA83B' ,'30E6CDCDCE015672' ,'D9E78CFF85CCEE00' ,'D8D24344BED70AE8' ,'C87478D8FBC72EAA')
+group by device_number,month_id,day_id
+
+select device_number,month_id,day_id,sum(visit_dura) from autohome_app where device_number in ('D11AC07CD872B8E3' ,'FD3A3951E9B110BF' ,'5678A6A78C263D1B' ,'67084810F60CC3CE' ,'4C1F46E51C181A24' ,'1506596D9C575360' ,'C7E94185BBFBB919' ,'7F78232A9827D836' ,'AEDFE487B9A7BAC6' ,'E7ADCC217BCC84F5' ,'0603F80E460BA33F' ,'83E88E8B564E486F' ,'5C4A7B2B65BB19C5' ,'90CA13020554F7ED' ,'542F6FBFDC2D5334' ,'156A3ADB6E144756' ,'57C9F3F760A62809' ,'917E3D96EAA5471A' ,'80BDEF5569892839' ,'92BF418A81C08020' ,'664818ECDFB03F44' ,'8CD42D3D682D7BF1' ,'97DFC4DCA45345DE' ,'AAF4254288F8F424' ,'46CA0176A0B1203A' ,'AB64411063512000' ,'006A85220B5B9C7A' ,'11BA78BCBAB72B17' ,'027CFE4E1CECEB3C' ,'D571E3C40F2FC23B')
+group by device_number,month_id,day_id
