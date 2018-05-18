@@ -1,0 +1,523 @@
+----后台执行
+nohup hive -f internet_stat.hql >>internet_stat.log 2>&1 &
+----查看日志
+tail -f internet_stat.log
+----中断
+ps -ef|grep internet_stat.hql 脚本名字
+kill -9 进程
+
+
+---1.1月份入库
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20180321-105553_DWA_V_M_CUS_2G_RNS_WIDE_01_0000001.031'  into table dwa_v_m_cus_2g_rns_wide_201801;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20180321-105553_DWA_V_M_CUS_3G_RNS_WIDE_01_0000001.031'  into table dwa_v_m_cus_3g_rns_wide_201801;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20180321-105553_DWA_V_M_CUS_CB_RNS_WIDE_01_0000001.031'  into table dwa_v_m_cus_cb_rns_wide_201801;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20180321-105553_dwa_m_ia_basic_user_app_01_0000001.031'  into table dwa_m_ia_basic_user_app;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20171215-140820_dwa_m_ia_basic_label_01_0000001.031' into table dwa_m_ia_basic_label;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20180321-105553_dwa_m_ia_basic_label_01_0000001.031' into table dwa_m_ia_basic_label;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20171215-140820_dwa_d_ia_basic_user_app_01~30_0000001.031' into table dwa_d_ia_basic_user_app_20180316;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20180321-105553_dwa_d_ia_basic_user_app_01~31_0000001.031' into table dwa_d_ia_basic_user_app_20180316;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20171215-140820_dwa_d_ia_basic_label_01~30_0000001.031' into table dwa_d_ia_basic_label;
+Load data  inpath '/files/prov/opdn1_zwkj2/CPHQ-20180321-105553_dwa_d_ia_basic_label_01~31_0000001.031' into table dwa_d_ia_basic_label;
+
+
+---2.70W用户数据
+
+drop table ml_device_number_master;
+create table ml_device_number_master as
+select device_number from 
+(select distinct misidn as device_number from cusc_ddh_deal_final_end
+union all
+select distinct device_number from dwa_m_ia_basic_user_app where month_id = '201801' limit 500000) t;
+
+
+drop table ml_device_number_master;
+create table ml_device_number_master as
+
+drop table ml_device_number_master;
+create table ml_device_number_master as
+select distinct device_number from
+(select distinct t1.misidn as device_number from dwa_d_misidn_stay_201801 t1,(select distinct device_number from dwa_m_ia_basic_user_app where month_id = '201801') t2 
+where t1.misidn = t2.device_number limit 700000
+union all
+select distinct device_number from 
+(select distinct t1.misidn as device_number from dwa_d_misidn_stay_201801 t1,(select distinct device_number from dwa_m_ia_basic_user_app where month_id = '201801') t2 
+where t1.misidn = t2.device_number) t1,deal_misidn201804 t2
+where t1.device_number = t2.misidn) t
+
+
+
+
+select count(distinct device_number) from 
+(select distinct t1.misidn as device_number from dwa_d_misidn_stay_201801 t1,(select distinct device_number from dwa_m_ia_basic_user_app where month_id = '201801') t2 
+where t1.misidn = t2.device_number) t1,deal_misidn201804 t2
+where t1.device_number = t2.misidn
+
+---3.客户信息表
+
+drop table ml_user_age_sex_area;
+create table ml_user_age_sex_area as
+select distinct device_number,cust_sex,years_old,area_id,month_id,prov_id from
+(select device_number,cust_sex,(case
+when cert_age > 0 and cert_age <= 20 then '0-20old'
+when cert_age > 20 and cert_age <= 30 then '20-30old'
+when cert_age > 30 and cert_age <= 40 then '30-40old'
+when cert_age > 40 and cert_age <= 50 then '40-50old'
+when cert_age > 50 and cert_age <= 60 then '50-60old'
+when cert_age > 60 and cert_age <= 70 then '60-70old'
+else 'unknow'
+end)years_old,area_id,month_id,prov_id from dwa_v_m_cus_2g_rns_wide_201801 where month_id='201801' and prov_id='031'
+union all
+select device_number,cust_sex,(case
+when cert_age > 0 and cert_age <= 20 then '0-20old'
+when cert_age > 20 and cert_age <= 30 then '20-30old'
+when cert_age > 30 and cert_age <= 40 then '30-40old'
+when cert_age > 40 and cert_age <= 50 then '40-50old'
+when cert_age > 50 and cert_age <= 60 then '50-60old'
+when cert_age > 60 and cert_age <= 70 then '60-70old'
+else 'unknow'
+end)years_old,area_id,month_id,prov_id from dwa_v_m_cus_3g_rns_wide_201801 where month_id='201801' and prov_id='031'
+union all
+select device_number,cust_sex,(case
+when cert_age > 0 and cert_age <= 20 then '0-20old'
+when cert_age > 20 and cert_age <= 30 then '20-30old'
+when cert_age > 30 and cert_age <= 40 then '30-40old'
+when cert_age > 40 and cert_age <= 50 then '40-50old'
+when cert_age > 50 and cert_age <= 60 then '50-60old'
+when cert_age > 60 and cert_age <= 70 then '60-70old'
+else 'unknow'
+end)years_old,area_id,month_id,prov_id from dwa_v_m_cus_cb_rns_wide_201801 where month_id='201801' and prov_id='031' ) t
+where cust_sex in ('2','1') and years_old != 'unknow';
+
+
+drop table ml_user_age_sex_area_detail;
+create table ml_user_age_sex_area_detail as
+select t1.device_number,t2.cust_sex,t2.years_old,t2.area_id,t2.month_id,t2.prov_id from 
+(select device_number from (select device_number,count(*) as co from ml_user_age_sex_area group by device_number) t where co < 2) t1,
+ml_user_age_sex_area t2
+where t1.device_number = t2.device_number
+
+---4.life_stage
+
+drop table ml_LIFE_STAGE;
+create table ml_LIFE_STAGE as
+select distinct device_number,(
+case 
+when label_code in ('H004008') and visit_cnt > 50 then 'birth'
+when label_code in ('H002002') and visit_cnt > 50 then 'marry'
+when label_code in ('H005009') and visit_cnt > 50 then 'job'
+else 'null'
+end
+) life_stage,month_id,prov_id
+from dwa_m_ia_basic_label where month_id='201801' and prov_id ='031'
+
+
+drop table ml_LIFE_STAGE_detail;
+create table ml_LIFE_STAGE_detail as
+
+select device_number,sum(is_birth_1) as is_birth,sum(is_marry_1) as is_marry,sum(is_job_1) as is_job from
+(select device_number,
+(case
+when life_stage = 'birth' then 1
+else 0
+end) is_birth_1,
+(case
+when life_stage = 'marry' then 1
+else 0
+end) is_marry_1,
+(case
+when life_stage = 'job' then 1
+else 0
+end) is_job_1
+from ml_LIFE_STAGE) t
+group by device_number;
+
+
+create table ml_label_new as
+select distinct device_number,(
+case 
+when label_code in ('H001002') and visit_cnt > 83 then 'shizhengyaowen' 
+when label_code in ('H001004') and visit_cnt > 61 then 'tiyuzixun'
+when label_code in ('H001006') and visit_cnt > 130 then 'kejizixun'
+when label_code in ('H001007') and visit_cnt > 32 then 'yulezixun'
+when label_code in ('H001008') and visit_cnt > 64 then 'caijingzixun'
+when label_code in ('H001009') and visit_cnt > 37 then 'wenhuajiaoyu'
+when label_code in ('H001010') and visit_cnt > 773 then 'qiyemenhu'
+when label_code in ('H001011') and visit_cnt > 24 then 'shehuiziyuan'
+when label_code in ('H001012') and visit_cnt > 178 then 'zonghezixun'
+when label_code in ('H001999') and visit_cnt > 3741 then 'xinwenzixun'
+when label_code in ('H002001') and visit_cnt > 3994 then 'jishitongxun'
+when label_code in ('H002002') and visit_cnt > 40 then 'hunlianjiaoyou'
+when label_code in ('H002005') and visit_cnt > 10 then 'shequluntan'
+when label_code in ('H002009') and visit_cnt > 574 then 'shejiaowangluo'
+when label_code in ('H002999') and visit_cnt > 25 then 'tongxinjiaoliu'
+when label_code in ('H003001') and visit_cnt > 1210 then 'shoujishipin'
+when label_code in ('H003002') and visit_cnt > 150 then 'shoujiyuedu'
+when label_code in ('H003003') and visit_cnt > 679 then 'shoujiyinpin'
+when label_code in ('H003004') and visit_cnt > 253 then 'shoujiyouxi'
+when label_code in ('H003006') and visit_cnt > 28 then 'yulegaoxiao'
+when label_code in ('H003007') and visit_cnt > 2879 then 'sheyingtupian'
+when label_code in ('H003008') and visit_cnt > 79 then 'wangluodiantai'
+when label_code in ('H003009') and visit_cnt > 10 then 'yingyuanpiaowu'
+when label_code in ('H004002') and visit_cnt > 239 then 'shijiantianqi'
+when label_code in ('H004003') and visit_cnt > 1293 then 'sousuoyinqin'
+when label_code in ('H004004') and visit_cnt > 449 then 'dahangwangzhan'
+when label_code in ('H004005') and visit_cnt > 132 then 'shenghuozonghe'
+when label_code in ('H004006') and visit_cnt > 18 then 'jiajufuwu'
+when label_code in ('H004007') and visit_cnt > 75 then 'qichexinxi'
+when label_code in ('H004008') and visit_cnt > 21 then 'muyingzixun'
+when label_code in ('H004009') and visit_cnt > 35 then 'yiliaojiankang'
+when label_code in ('H004011') and visit_cnt > 97 then 'lvyouchuxing'
+when label_code in ('H004012') and visit_cnt > 50 then 'wuliukuaidi'
+when label_code in ('H004013') and visit_cnt > 21 then 'canyinmeishi'
+when label_code in ('H004015') and visit_cnt > 17 then 'feifawangzhan'
+when label_code in ('H004016') and visit_cnt > 42 then 'waimaisongcan'
+when label_code in ('H004017') and visit_cnt > 908 then 'ditudaohang'
+when label_code in ('H004018') and visit_cnt > 405 then 'dacheruanjian'
+when label_code in ('H004019') and visit_cnt > 25 then 'chaxunfuwu'
+when label_code in ('H004020') and visit_cnt > 235 then 'tuangoudazhe'
+when label_code in ('H004022') and visit_cnt > 24 then 'jiaoyuxuexi'
+when label_code in ('H005001') and visit_cnt > 1329 then 'wangshanggouwu'
+when label_code in ('H005002') and visit_cnt > 460 then 'dianzizhifu'
+when label_code in ('H005008') and visit_cnt > 93 then 'shangwubangong'
+when label_code in ('H005009') and visit_cnt > 30 then 'qiuzhizhaopin'
+when label_code in ('H005010') and visit_cnt > 435 then 'yingxiaopingtai'
+when label_code in ('H005011') and visit_cnt > 593 then 'yunfuwu'
+when label_code in ('H005012') and visit_cnt > 46 then 'shoujiyinhang'
+when label_code in ('H005013') and visit_cnt > 91 then 'jinronglicai'
+when label_code in ('H006017') and visit_cnt > 355 then 'wangshangyingyeting'
+when label_code in ('H007001') and visit_cnt > 346 then 'anquanshadu'
+when label_code in ('H007003') and visit_cnt > 287 then 'liulanqi'
+when label_code in ('H007004') and visit_cnt > 237 then 'xitonggongju'
+when label_code in ('H007005') and visit_cnt > 84 then 'shurufa'
+when label_code in ('H007006') and visit_cnt > 31 then 'cidianfanyi'
+when label_code in ('H007007') and visit_cnt > 116 then 'zhutizhuomian'
+when label_code in ('H007008') and visit_cnt > 4907 then 'yingyongshangdian'
+when label_code in ('H007009') and visit_cnt > 297 then 'wangluocunchu'
+when label_code in ('H007011') and visit_cnt > 137 then 'wuxianguanli'
+when label_code in ('H007012') and visit_cnt > 120 then 'dianziyoujian'
+when label_code in ('H007999') and visit_cnt > 38 then 'gongjuruanjian'
+else 'null'
+end
+) life_stage,month_id,prov_id
+from dwa_m_ia_basic_label where month_id='201801' and prov_id ='031';
+
+
+
+drop table ml_LIFE_STAGE_detail;
+create table ml_LIFE_STAGE_detail as
+select device_number,sum(shizhengyaowen) as shizhengyaowen ,sum(tiyuzixun) as tiyuzixun ,sum(kejizixun) as kejizixun ,sum(yulezixun) as yulezixun ,sum(caijingzixun) as caijingzixun ,sum(wenhuajiaoyu) as wenhuajiaoyu ,sum(qiyemenhu) as qiyemenhu ,sum(shehuiziyuan) as shehuiziyuan ,sum(zonghezixun) as zonghezixun ,sum(xinwenzixun) as xinwenzixun ,sum(jishitongxun) as jishitongxun ,sum(hunlianjiaoyou) as hunlianjiaoyou ,sum(shequluntan) as shequluntan ,sum(shejiaowangluo) as shejiaowangluo ,sum(tongxinjiaoliu) as tongxinjiaoliu ,sum(shoujishipin) as shoujishipin ,sum(shoujiyuedu) as shoujiyuedu ,sum(shoujiyinpin) as shoujiyinpin ,sum(shoujiyouxi) as shoujiyouxi ,sum(yulegaoxiao) as yulegaoxiao ,sum(sheyingtupian) as sheyingtupian ,sum(wangluodiantai) as wangluodiantai ,sum(yingyuanpiaowu) as yingyuanpiaowu ,sum(shijiantianqi) as shijiantianqi ,sum(sousuoyinqin) as sousuoyinqin ,sum(dahangwangzhan) as dahangwangzhan ,sum(shenghuozonghe) as shenghuozonghe ,sum(jiajufuwu) as jiajufuwu ,sum(qichexinxi) as qichexinxi ,sum(muyingzixun) as muyingzixun ,sum(yiliaojiankang) as yiliaojiankang ,sum(lvyouchuxing) as lvyouchuxing ,sum(wuliukuaidi) as wuliukuaidi ,sum(canyinmeishi) as canyinmeishi ,sum(feifawangzhan) as feifawangzhan ,sum(waimaisongcan) as waimaisongcan ,sum(ditudaohang) as ditudaohang ,sum(dacheruanjian) as dacheruanjian ,sum(chaxunfuwu) as chaxunfuwu ,sum(tuangoudazhe) as tuangoudazhe ,sum(jiaoyuxuexi) as jiaoyuxuexi ,sum(wangshanggouwu) as wangshanggouwu ,sum(dianzizhifu) as dianzizhifu ,sum(shangwubangong) as shangwubangong ,sum(qiuzhizhaopin) as qiuzhizhaopin ,sum(yingxiaopingtai) as yingxiaopingtai ,sum(yunfuwu) as yunfuwu ,sum(shoujiyinhang) as shoujiyinhang ,sum(jinronglicai) as jinronglicai ,sum(wangshangyingyeting) as wangshangyingyeting ,sum(anquanshadu) as anquanshadu ,sum(liulanqi) as liulanqi ,sum(xitonggongju) as xitonggongju ,sum(shurufa) as shurufa ,sum(cidianfanyi) as cidianfanyi ,sum(zhutizhuomian) as zhutizhuomian ,sum(yingyongshangdian) as yingyongshangdian ,sum(wangluocunchu) as wangluocunchu ,sum(wuxianguanli) as wuxianguanli ,sum(dianziyoujian) as dianziyoujian ,sum(gongjuruanjian) as gongjuruanjian from
+(select device_number,
+(case when life_stage = 'shizhengyaowen' then 1 else 0 end) shizhengyaowen,
+(case when life_stage = 'tiyuzixun' then 1 else 0 end) tiyuzixun,
+(case when life_stage = 'kejizixun' then 1 else 0 end) kejizixun,
+(case when life_stage = 'yulezixun' then 1 else 0 end) yulezixun,
+(case when life_stage = 'caijingzixun' then 1 else 0 end) caijingzixun,
+(case when life_stage = 'wenhuajiaoyu' then 1 else 0 end) wenhuajiaoyu,
+(case when life_stage = 'qiyemenhu' then 1 else 0 end) qiyemenhu,
+(case when life_stage = 'shehuiziyuan' then 1 else 0 end) shehuiziyuan,
+(case when life_stage = 'zonghezixun' then 1 else 0 end) zonghezixun,
+(case when life_stage = 'xinwenzixun' then 1 else 0 end) xinwenzixun,
+(case when life_stage = 'jishitongxun' then 1 else 0 end) jishitongxun,
+(case when life_stage = 'hunlianjiaoyou' then 1 else 0 end) hunlianjiaoyou,
+(case when life_stage = 'shequluntan' then 1 else 0 end) shequluntan,
+(case when life_stage = 'shejiaowangluo' then 1 else 0 end) shejiaowangluo,
+(case when life_stage = 'tongxinjiaoliu' then 1 else 0 end) tongxinjiaoliu,
+(case when life_stage = 'shoujishipin' then 1 else 0 end) shoujishipin,
+(case when life_stage = 'shoujiyuedu' then 1 else 0 end) shoujiyuedu,
+(case when life_stage = 'shoujiyinpin' then 1 else 0 end) shoujiyinpin,
+(case when life_stage = 'shoujiyouxi' then 1 else 0 end) shoujiyouxi,
+(case when life_stage = 'yulegaoxiao' then 1 else 0 end) yulegaoxiao,
+(case when life_stage = 'sheyingtupian' then 1 else 0 end) sheyingtupian,
+(case when life_stage = 'wangluodiantai' then 1 else 0 end) wangluodiantai,
+(case when life_stage = 'yingyuanpiaowu' then 1 else 0 end) yingyuanpiaowu,
+(case when life_stage = 'shijiantianqi' then 1 else 0 end) shijiantianqi,
+(case when life_stage = 'sousuoyinqin' then 1 else 0 end) sousuoyinqin,
+(case when life_stage = 'dahangwangzhan' then 1 else 0 end) dahangwangzhan,
+(case when life_stage = 'shenghuozonghe' then 1 else 0 end) shenghuozonghe,
+(case when life_stage = 'jiajufuwu' then 1 else 0 end) jiajufuwu,
+(case when life_stage = 'qichexinxi' then 1 else 0 end) qichexinxi,
+(case when life_stage = 'muyingzixun' then 1 else 0 end) muyingzixun,
+(case when life_stage = 'yiliaojiankang' then 1 else 0 end) yiliaojiankang,
+(case when life_stage = 'lvyouchuxing' then 1 else 0 end) lvyouchuxing,
+(case when life_stage = 'wuliukuaidi' then 1 else 0 end) wuliukuaidi,
+(case when life_stage = 'canyinmeishi' then 1 else 0 end) canyinmeishi,
+(case when life_stage = 'feifawangzhan' then 1 else 0 end) feifawangzhan,
+(case when life_stage = 'waimaisongcan' then 1 else 0 end) waimaisongcan,
+(case when life_stage = 'ditudaohang' then 1 else 0 end) ditudaohang,
+(case when life_stage = 'dacheruanjian' then 1 else 0 end) dacheruanjian,
+(case when life_stage = 'chaxunfuwu' then 1 else 0 end) chaxunfuwu,
+(case when life_stage = 'tuangoudazhe' then 1 else 0 end) tuangoudazhe,
+(case when life_stage = 'jiaoyuxuexi' then 1 else 0 end) jiaoyuxuexi,
+(case when life_stage = 'wangshanggouwu' then 1 else 0 end) wangshanggouwu,
+(case when life_stage = 'dianzizhifu' then 1 else 0 end) dianzizhifu,
+(case when life_stage = 'shangwubangong' then 1 else 0 end) shangwubangong,
+(case when life_stage = 'qiuzhizhaopin' then 1 else 0 end) qiuzhizhaopin,
+(case when life_stage = 'yingxiaopingtai' then 1 else 0 end) yingxiaopingtai,
+(case when life_stage = 'yunfuwu' then 1 else 0 end) yunfuwu,
+(case when life_stage = 'shoujiyinhang' then 1 else 0 end) shoujiyinhang,
+(case when life_stage = 'jinronglicai' then 1 else 0 end) jinronglicai,
+(case when life_stage = 'wangshangyingyeting' then 1 else 0 end) wangshangyingyeting,
+(case when life_stage = 'anquanshadu' then 1 else 0 end) anquanshadu,
+(case when life_stage = 'liulanqi' then 1 else 0 end) liulanqi,
+(case when life_stage = 'xitonggongju' then 1 else 0 end) xitonggongju,
+(case when life_stage = 'shurufa' then 1 else 0 end) shurufa,
+(case when life_stage = 'cidianfanyi' then 1 else 0 end) cidianfanyi,
+(case when life_stage = 'zhutizhuomian' then 1 else 0 end) zhutizhuomian,
+(case when life_stage = 'yingyongshangdian' then 1 else 0 end) yingyongshangdian,
+(case when life_stage = 'wangluocunchu' then 1 else 0 end) wangluocunchu,
+(case when life_stage = 'wuxianguanli' then 1 else 0 end) wuxianguanli,
+(case when life_stage = 'dianziyoujian' then 1 else 0 end) dianziyoujian,
+(case when life_stage = 'gongjuruanjian' then 1 else 0 end) gongjuruanjian
+from ml_label_new) t
+group by device_number;
+
+
+
+
+---5.车辆保有者
+
+drop table ml_car_owner;
+create table ml_car_owner as
+select distinct device_number,1 car_owner from 
+(select misidn as device_number from cusc_ddh_gas_final_end where vis_gas_cnt < 15
+union all
+select distinct device_number from dwa_m_ia_basic_user_app where prod_id in ('C225602' ,'C223569' ,'C227439' ,'C227385' ,'C231058' ,'C227429' ,'C223567' ,'C27696' ,'C222419' ,'C48582' ,'C229606' ,'C231442' ,'C222477' ,'C48441' ,'C224605' ,'C223616' ,'C65229' ,'C21580' ,'C222479' ,'C225422' ,'C32036' ,'C227670' ,'C65311' ,'C227666' ,'C29512' ,'C66077' ,'C29819' ,'C84499' ,'C22175' ,'C224988' ,'C231766' ,'C228238' ,'C225685' ,'C226982' ,'C231601' ,'C231054' ,'C231247' ,'C227156' ,'C229965' ,'C66458' ,'C227858' ,'C228165' ,'C231258' ,'C231250' ,'C226428' ,'C231746' ,'C223849' ,'C231251' ,'C231253' ,'C231252' ,'C226991' ,'C223224' ,'C231254' ,'C231248' ,'C230707' ,'C224629' ,'C231249' ,'C224777' ,'C226626' ,'C76354' ,'C27627' ,'C231328' ,'C227560' ,'C65381' ,'C227856' ,'C222465' ,'C222571' ,'C32194' ,'C230361' ,'C66769' ,'C226310' ,'C226836' ,'C66767' ,'C84363' ,'C224460' ,'C223935' ,'C223228' ,'C20430' ,'C225694' ,'C84362' ,'C224781' ,'C224855' ,'C231594' ,'C223594' ,'C230185' ,'C227668' ,'C227116' ,'C227594' ,'C230806' ,'C225183' ,'C227637' ,'C224506' ,'C32504' ,'C227655' ,'C226239' ,'C227681' ,'C225179' ,'C228537' ,'C230805' ,'C226765' ,'C227117' ,'C230255' ,'C227705' ,'C227980' ,'C227645' ,'C231063' ,'C233120' ,'C230515' ,'C227673' ,'C227716' ,'C227688' ,'C231052') and prov_id ='031' and month_id = '201801') t;
+
+
+---6.app_internet上网行为表
+drop table dwa_m_ia_basic_user_app_201712;
+create table dwa_m_ia_basic_user_app_201712 as
+select device_number,prod_id,prod_name,month_id,sum(visit_cnt) as visit_cnt,sum(visit_dura) as visit_dura from dwa_d_ia_basic_user_web_20180316 where month_id in('201712','201711','201801') group by device_number,prod_id,prod_name,month_id;
+
+
+
+drop table ml_internet_app;
+create table ml_internet_app as
+select t.device_number,t1.daohang_cnt,t1.daohang_dura,t2.didi_cnt,t2.didi_dura,t3.autohome_cnt,t3.autohome_dura,t4.gongxiangdanche_cnt,t4.gongxiangdanche_dura,t5.autohome_cnt_201712,t5.autohome_dura_201712,t6.autohome_cnt_201711,t6.autohome_dura_201711,t7.gongxiangqiche_cnt,t7.gongxiangqiche_dura,t8.yinyue_cnt,t8.yinyue_dura,t9.zhifubao_cnt,t9.zhifubao_dura,t10.wechat_cnt,t10.wechat_dura,t11.taobao_cnt,t11.taobao_dura,t12.zhihu_cnt,t12.zhihu_dura,t13.meituan_cnt,t13.meituan_dura,t14.mayi_cnt,t14.mayi_dura from 
+(select distinct device_number from dwa_m_ia_basic_user_app where month_id = '201801') t
+left join 
+(select device_number, sum(visit_cnt) as daohang_cnt,sum(visit_dura) as daohang_dura from dwa_m_ia_basic_user_app where month_id = '201801' and prod_name in('高德地图','腾讯地图','百度地图') group by device_number) t1
+on t.device_number = t1.device_number
+left join 
+(select device_number, sum(visit_cnt) as didi_cnt,sum(visit_dura) as didi_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('滴滴出行') group by device_number) t2
+on t.device_number = t2.device_number
+left join
+(select device_number, sum(visit_cnt) as autohome_cnt,sum(visit_dura) as autohome_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('汽车之家') group by device_number) t3
+on t.device_number = t3.device_number
+left join
+(select device_number, sum(visit_cnt) as gongxiangdanche_cnt,sum(visit_dura) as gongxiangdanche_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('ofo','摩拜单车') group by device_number) t4
+on t.device_number = t4.device_number
+left join
+(select device_number, sum(visit_cnt) as autohome_cnt_201712,sum(visit_dura) as autohome_dura_201712 from dwa_m_ia_basic_user_app_201712 where month_id = '201712' and prod_name in('汽车之家') group by device_number) t5
+on t.device_number = t5.device_number
+left join
+(select device_number, sum(visit_cnt) as autohome_cnt_201711,sum(visit_dura) as autohome_dura_201711 from dwa_m_ia_basic_user_app_201712 where month_id = '201711' and prod_name in('汽车之家') group by device_number) t6
+on t.device_number = t6.device_number
+left join
+(select device_number, sum(visit_cnt) as gongxiangqiche_cnt,sum(visit_dura) as gongxiangqiche_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_id in('C223294') group by device_number) t7
+on t.device_number = t7.device_number
+left join
+(select device_number, sum(visit_cnt) as yinyue_cnt,sum(visit_dura) as yinyue_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('QQ音乐','网易云音乐','酷狗音乐','虾米音乐','酷我音乐','百度音乐') group by device_number) t8
+on t.device_number = t8.device_number
+left join
+(select device_number, sum(visit_cnt) as zhifubao_cnt,sum(visit_dura) as zhifubao_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('支付宝') group by device_number) t9
+on t.device_number = t9.device_number
+left join
+(select device_number, sum(visit_cnt) as wechat_cnt,sum(visit_dura) as wechat_dura from dwa_m_ia_basic_user_app where month_id = '201801' and prod_name in('微信') group by device_number) t10
+on t.device_number = t10.device_number
+left join
+(select device_number, sum(visit_cnt) as taobao_cnt,sum(visit_dura) as taobao_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('淘宝网') group by device_number) t11
+on t.device_number = t11.device_number
+left join
+(select device_number, sum(visit_cnt) as zhihu_cnt,sum(visit_dura) as zhihu_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('知乎') group by device_number) t12
+on t.device_number = t12.device_number
+left join
+(select device_number, sum(visit_cnt) as meituan_cnt,sum(visit_dura) as meituan_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('美团网') group by device_number) t13
+on t.device_number = t13.device_number
+left join
+(select device_number, sum(visit_cnt) as mayi_cnt,sum(visit_dura) as mayi_dura from dwa_m_ia_basic_user_app_201712 where month_id = '201801' and prod_name in('蚂蚁聚宝','东方财富网') group by device_number) t14
+on t.device_number = t14.device_number;
+
+
+
+drop table ml_internet_app_detail;
+create table ml_internet_app_detail as
+select device_number,daohang_cnt,daohang_dura,didi_cnt,didi_dura,autohome_cnt,autohome_dura,gongxiangdanche_cnt,gongxiangdanche_dura,autohome_cnt_201712,autohome_dura_201712,autohome_cnt_201711,autohome_dura_201711,gongxiangqiche_cnt,gongxiangqiche_dura,yinyue_cnt,yinyue_dura,zhifubao_cnt,zhifubao_dura,wechat_cnt,wechat_dura,taobao_cnt,taobao_dura,zhihu_cnt,zhihu_dura,meituan_cnt,meituan_dura,mayi_cnt,mayi_dura from ml_internet_app where daohang_cnt != 0 or daohang_dura != 0 or didi_cnt != 0 or didi_dura != 0 or autohome_cnt != 0 or autohome_dura != 0 or gongxiangdanche_cnt != 0 or gongxiangdanche_dura != 0 or autohome_cnt_201712 != 0 or autohome_dura_201712 != 0 or autohome_cnt_201711 != 0 or autohome_dura_201711 != 0 or gongxiangqiche_cnt != 0 or gongxiangqiche_dura != 0 or yinyue_cnt != 0 or yinyue_dura != 0 or zhifubao_dura != 0 or zhifubao_cnt != 0 or wechat_cnt != 0 or wechat_dura != 0 or taobao_cnt != 0 or taobao_dura != 0 or zhihu_cnt != 0 or zhihu_dura != 0 or meituan_cnt != 0 or meituan_dura != 0 or mayi_cnt != 0 or mayi_dura != 0;
+
+
+
+
+
+
+
+---7.家到工作地、购买力、出账表
+cusc_ddh_house_price_distance
+
+
+
+---8.加油站访问
+cusc_ddh_gas_final_end
+
+
+---9经销商访问
+cusc_ddh_deal_final_end
+
+
+---10.GPS表
+dwa_s_gps_matser20
+
+
+---11.关联
+
+select count(*) from ml_master;
+ 
+ 
+ 
+ select car_owner from ml_master limit 1000;
+ 
+ 
+drop table ml_master;
+create table ml_master as
+select distinct t1.device_number,t2.cust_sex,t2.years_old,
+t3.shizhengyaowen,t3.tiyuzixun ,t3.kejizixun ,t3.yulezixun ,t3.caijingzixun ,t3.wenhuajiaoyu ,t3.qiyemenhu ,t3.shehuiziyuan ,t3.zonghezixun ,t3.xinwenzixun ,t3.jishitongxun ,t3.hunlianjiaoyou ,t3.shequluntan ,t3.shejiaowangluo ,t3.tongxinjiaoliu ,t3.shoujishipin ,t3.shoujiyuedu ,t3.shoujiyinpin ,t3.shoujiyouxi,t3.yulegaoxiao ,t3.sheyingtupian ,t3.wangluodiantai ,t3.yingyuanpiaowu ,t3.shijiantianqi ,t3.sousuoyinqin ,t3.dahangwangzhan ,t3.shenghuozonghe ,t3.jiajufuwu ,t3.qichexinxi ,t3.muyingzixun ,t3.yiliaojiankang ,t3.lvyouchuxing ,t3.wuliukuaidi ,t3.canyinmeishi ,t3.feifawangzhan ,t3.waimaisongcan ,t3.ditudaohang ,t3.dacheruanjian ,t3.chaxunfuwu ,t3.tuangoudazhe ,t3.jiaoyuxuexi ,t3.wangshanggouwu ,t3.dianzizhifu ,t3.shangwubangong ,t3.qiuzhizhaopin ,t3.yingxiaopingtai ,t3.yunfuwu ,t3.shoujiyinhang ,t3.jinronglicai ,t3.wangshangyingyeting ,t3.anquanshadu ,t3.liulanqi ,t3.xitonggongju ,t3.shurufa,t3.cidianfanyi ,t3.zhutizhuomian ,t3.yingyongshangdian ,t3.wangluocunchu ,t3.wuxianguanli ,t3.dianziyoujian ,t3.gongjuruanjian,
+t4.car_owner,
+t5.area_price,
+t5.distance,
+t6.daohang_cnt,t6.daohang_dura,t6.didi_cnt,t6.didi_dura,t6.autohome_cnt,t6.autohome_dura,t6.gongxiangdanche_cnt,t6.gongxiangdanche_dura,t6.autohome_cnt_201712,t6.autohome_dura_201712,t6.autohome_cnt_201711,t6.autohome_dura_201711,t6.gongxiangqiche_cnt,t6.gongxiangqiche_dura,
+t7.foot_distance,t7.bike_distance,t7.car_distance,
+t8.vis_deal_cnt,t8.cnt as xiandai_dealer_cnt,
+t9.vis_cnt as gas_vis_cnt
+from
+ml_device_number_master t1
+left join
+ml_user_age_sex_area_detail t2
+on t1.device_number = t2.device_number
+left join
+ml_LIFE_STAGE_detail t3
+on t1.device_number = t3.device_number
+left join
+ml_car_owner t4
+on t1.device_number = t4.device_number
+left join 
+cusc_ddh_house_price_distance201804 t5
+on t1.device_number = t5.msisdn
+left join
+ml_internet_app_detail t6
+on t1.device_number = t6.device_number
+left join
+gps_distance_misidn201804 t7
+on t1.device_number = t7.misidn
+left join
+deal_misidn201804 t8
+on t1.device_number = t8.misidn
+left join
+cusc_ddh_gas_final_end t9
+on t1.device_number = t9.misidn;
+
+
+
+
+
+
+-----12.用户画像
+drop table ml_label_app;
+create table ml_label_app as
+select t.device_number,t1.yingyongshangdian_dura,t2.tuangoudazhe_dura,t3.shangwubangong_dura,t4.jishitongxun_dura,t5.dacheruanjian_dura from 
+(select distinct device_number from dwa_m_ia_basic_label where month_id = '201801' and prov_id ='031') t
+left join 
+(select device_number, sum(visit_dura) as yingyongshangdian_dura from dwa_m_ia_basic_label where label_code in ('H007008') and month_id = '201801' and prov_id ='031' group by device_number) t1
+on t.device_number = t1.device_number
+left join 
+(select device_number, sum(visit_dura) as tuangoudazhe_dura from dwa_m_ia_basic_label where label_code in ('H004020') and month_id = '201801' and prov_id ='031' group by device_number) t2
+on t.device_number = t2.device_number
+left join
+(select device_number, sum(visit_dura) as shangwubangong_dura from dwa_m_ia_basic_label where label_code in ('H005008') and month_id = '201801' and prov_id ='031' group by device_number) t3
+on t.device_number = t3.device_number
+left join
+(select device_number, sum(visit_dura) as jishitongxun_dura from dwa_m_ia_basic_label where label_code in ('H002001') and month_id = '201801' and prov_id ='031' group by device_number) t4
+on t.device_number = t4.device_number
+left join
+(select device_number, sum(visit_dura) as dacheruanjian_dura from dwa_m_ia_basic_label where label_code in ('H004018') and month_id = '201801' and prov_id ='031' group by device_number) t5
+on t.device_number = t5.device_number
+
+
+
+drop table ml_master;
+create table ml_master as
+select distinct t1.device_number,t2.cust_sex,t2.years_old,
+t3.yingyongshangdian_dura,t3.tuangoudazhe_dura,t3.shangwubangong_dura,t3.jishitongxun_dura,t3.dacheruanjian_dura,
+t4.car_owner,
+t5.area_price,
+t5.distance,
+t6.daohang_cnt,t6.daohang_dura,t6.didi_cnt,t6.didi_dura,t6.autohome_cnt,t6.autohome_dura,t6.gongxiangdanche_cnt,t6.gongxiangdanche_dura,t6.autohome_cnt_201712,t6.autohome_dura_201712,t6.autohome_cnt_201711,t6.autohome_dura_201711,t6.gongxiangqiche_cnt,t6.gongxiangqiche_dura,t6.yinyue_cnt,t6.yinyue_dura,t6.zhifubao_cnt,t6.zhifubao_dura,
+t6.wechat_cnt,t6.wechat_dura,t6.taobao_cnt,t6.taobao_dura,t6.zhihu_cnt,t6.zhihu_dura,t6.meituan_cnt,t6.meituan_dura,t6.mayi_cnt,t6.mayi_dura, 
+t7.foot_distance,t7.bike_distance,t7.car_distance,
+t8.vis_deal_cnt,t8.cnt as xiandai_dealer_cnt,
+t9.vis_cnt as gas_vis_cnt
+from
+ml_device_number_master t1
+left join
+ml_user_age_sex_area_detail t2
+on t1.device_number = t2.device_number
+left join
+ml_label_app t3
+on t1.device_number = t3.device_number
+left join
+ml_car_owner t4
+on t1.device_number = t4.device_number
+left join 
+cusc_ddh_house_price_distance201804 t5
+on t1.device_number = t5.msisdn
+left join
+ml_internet_app_detail t6
+on t1.device_number = t6.device_number
+left join
+gps_distance_misidn201804 t7
+on t1.device_number = t7.misidn
+left join
+deal_misidn201804 t8
+on t1.device_number = t8.misidn
+left join
+cusc_ddh_gas_final_end t9
+on t1.device_number = t9.misidn;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
